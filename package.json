@@ -1,6 +1,10 @@
 {
 	"scripts": {
-		"build": "esbuild --bundle src/main.ts --outdir=dist --minify",
+		"build": "npm run check && esbuild --bundle src/main.ts --outdir=dist --minify",
+		"check": "tsc --incremental --noemit",
 		"clean": "rm -r dist/"
+	},
+	"devDependencies": {
+		"esbuild": "^0.20.2"
 	}
 }
