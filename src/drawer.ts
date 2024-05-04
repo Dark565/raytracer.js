@@ -1,9 +1,9 @@
-class Drawer {
+export class Drawer {
 	ctx: CanvasRenderingContext2D;
 	img: ImageData;
 	px_img: ImageData;
 
-	constructor(canvas_id) {
+	constructor(canvas_id: string) {
 		let canvas = <HTMLCanvasElement> document.getElementById(canvas_id);
 		this.ctx = canvas.getContext("2d");
 		this.img = this.ctx.createImageData(canvas.width, canvas.height);
@@ -28,7 +28,7 @@ class Drawer {
 		this.ctx.putImageData(this.img, 0, 0);
 	}
 
-	draw_line(from, to, width, color) {
+	draw_line(from: number[], to: number[], width: number, color: number[]) {
 		this.ctx.lineWidth = width
 		this.ctx.beginPath();
 		this.ctx.moveTo(from[0], from[1]);
@@ -36,7 +36,7 @@ class Drawer {
 		this.ctx.stroke();
 	}
 
-	draw_pixel(x, y, color) {
+	draw_pixel(x: number, y: number, color: number[]) {
 		let img_data = this.px_img.data;
 		img_data[0] = color[0];
 		img_data[1] = color[1];
@@ -44,5 +44,3 @@ class Drawer {
 		this.ctx.putImageData(this.px_img, x, y);
 	};
 };
-
-export { Drawer };

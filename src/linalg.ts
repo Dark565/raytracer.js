@@ -1,13 +1,13 @@
-class VectorError extends Error {}
+export class VectorError extends Error {}
 
-class Vector {
+/**
+* An abstraction of the mathematical vector.
+*/
+export class Vector {
 	v: number[];
 	size: number;
 
-	constructor(x: number[]|void);
-	constructor(x: Vector);
-
-	constructor(x: any) {
+	constructor(x?: number[]|Vector) {
 		if (x instanceof Array) {
 			this.v = x.slice(0);
 		} else if (x instanceof Vector) {
@@ -107,19 +107,15 @@ class Vector {
 	}
 }
 
-function vector(...numbers: number[]) {
+export function vector(...numbers: number[]) {
 	return new Vector(numbers);
 }
 
-//function Vector(x: number[]|Vector|void): Vector {
-//	return new Vector(x);
-//}
-
-interface Solid {
+export interface Solid {
 	line_cross_point(start: Vector, dir: Vector): Vector[];
 }
 
-class Plane implements Solid {
+export class Plane implements Solid {
 	normal: Vector;
 	pos: Vector;
 	constructor(normal: Vector, pos: Vector) {
@@ -138,7 +134,7 @@ class Plane implements Solid {
 	}
 }
 
-class Sphere implements Solid {
+export class Sphere implements Solid {
 	radius: number;
 	pos: Vector;
 	constructor(pos: Vector, radius: number) {
@@ -163,6 +159,3 @@ class Sphere implements Solid {
 		return [start.add(dir.scale(t1)), start.add(dir.scale(t2))];
 	}
 }
-
-export { VectorError, Vector, vector };
-export { Solid, Plane, Sphere };
