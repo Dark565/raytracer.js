@@ -1,50 +1,3 @@
-class Drawer {
-	ctx: HTMLCanvasElement;
-	img: ImageData;
-	px_img: ImageData;
-
-	constructor(canvas_id) {
-		let canvas = document.getElementById(canvas_id);
-		this.ctx = canvas.getContext("2d");
-		this.img = this.ctx.createImageData(canvas.width, canvas.height);
-		this.px_img = this.ctx.createImageData(1,1);
-	}
-
-	draw_noise() {
-		let width  = this.ctx.canvas.width;
-		let height = this.ctx.canvas.height;
-		let total_size = width * height;
-		let img_data = this.img.data;
-
-		for (let i = 0; i < total_size*4; i += 4 /* rgba */) {
-			let _r = Math.random();
-			let rnd = (_r * 0xffffff);
-			img_data[i]   = rnd & 0xff;
-			img_data[i+1] = (rnd >> 8)  & 0xff;
-			img_data[i+2] = (rnd >> 16) & 0xff;
-			img_data[i+3] = 0xff;
-		}
-		
-		this.ctx.putImageData(this.img, 0, 0);
-	}
-
-	draw_line(from, to, width, color) {
-		this.ctx.lineWidth = width
-		this.ctx.beginPath();
-		this.ctx.moveTo(from[0], from[1]);
-		this.ctx.lineTo(to[0], to[1]);
-		this.ctx.stroke();
-	}
-
-	draw_pixel(x, y, color) {
-		let img_data = this.px_img.data;
-		img_data[0] = color[0];
-		img_data[1] = color[1];
-		img_data[2] = color[2];
-		this.ctx.putImageData(this.px_img, x, y);
-	};
-};
-
 class VectorError extends Error {}
 
 class Vector {
@@ -211,32 +164,5 @@ class Sphere implements Solid {
 	}
 }
 
-class Octree {
-	id: number;
-	#nodes: Octree[]|any[][];
-	
-	constructor(...nodes: Octree[]|any[][]) {
-		this.#nodes = nodes.map((x)=>x);
-	}
-
-	get_node(n: number): Octree|any[] {
-		if (n < 0 || n > 7)
-			throw Error("Node index out of range (0..7)");
-
-		return this.#nodes[n];
-	}
-
-	set_node(n: number, value: Octree|any[]): Octree|any[] {
-		if (n < 0 || n > 7)
-			throw Error("Node index out of range (0..7)");
-
-		let old_value = this.#nodes[n];
-		this.#nodes[n] = value;
-		return old_value;
-	}
-}
-
-function main() {
-}
-
-main();
+export { VectorError, Vector, vector };
+export { Solid, Plane, Sphere };

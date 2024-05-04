@@ -1,0 +1,6 @@
+{
+	"scripts": {
+		"build": "esbuild --bundle src/main.ts --outdir=dist --minify",
+		"clean": "rm -r dist/"
+	}
+}
