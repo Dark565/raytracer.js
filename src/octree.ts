@@ -23,4 +23,4 @@ class Octree {
 	}
 }
 
-export Octree;
+export { Octree };

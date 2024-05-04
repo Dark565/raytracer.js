@@ -45,4 +45,4 @@ class Drawer {
 	};
 };
 
-export Drawer;
+export { Drawer };
