@@ -1,13 +1,16 @@
-
 /**
 * A class abstracting a dynamic octree
 */
+
+type Tuple8<T> = [T,T,T,T,T,T,T,T];
+type Octand = Octree|any[];
+
 export class Octree {
 	id: number;
-	#nodes: Octree[]|any[][];
-	
-	constructor(...nodes: Octree[]|any[][]) {
-		this.#nodes = nodes.slice(0);
+	#nodes: Tuple8<Octand>;
+
+	constructor(...nodes: Tuple8<Octand>) {
+		this.#nodes = <Tuple8<Octand>> nodes.slice(0);
 	}
 
 	#bounds_check(n: number) {
@@ -16,13 +19,13 @@ export class Octree {
 	}
 
 	/** Get the `n`-th node. */
-	get(n: number): Octree|any[] {
+	get(n: number): Octand {
 		this.#bounds_check(n);
 		return this.#nodes[n];
 	}
 
-	/** Set the `n`-th node. */
-	set(n: number, value: Octree|any[]): Octree|any[] {
+	/** Set the `n`-th node and get the old value */
+	set(n: number, value: Octand): Octand {
 		this.#bounds_check(n);
 
 		let old_value = this.#nodes[n];
