@@ -1,0 +1,8 @@
+{
+	"transform": {
+		"^.+\\.tsx?$": "esbuild-jest"
+	},
+	"moduleNameMapper": {
+		"@app/(.*)": "<rootDir>/src/$1"
+	}
+}

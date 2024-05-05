@@ -1,11 +1,17 @@
 {
 	"scripts": {
-		"build": "npm run check && esbuild --bundle src/main.ts --outdir=dist --minify",
+		"build": "npm run check && esbuild --bundle src/main.ts --outdir=dist",
 		"check": "tsc --incremental --noemit",
 		"pedantic": "tsc --incremental --noemit --strict",
-		"clean": "rm -r dist/"
+		"clean": "rm -r dist/",
+		"test": "jest"
 	},
 	"devDependencies": {
-		"esbuild": "^0.20.2"
-	}
+		"@types/jest": "^29.5.12",
+		"esbuild": "^0.20.2",
+		"esbuild-jest": "^0.5.0"
+	},
+	"moduleDirectories": [
+		"src"
+	]
 }
