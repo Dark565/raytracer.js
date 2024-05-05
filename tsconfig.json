@@ -3,6 +3,11 @@
 		"target": "es2017",
 		"lib": ["es2017", "dom"],
 		"allowJs": true,
-		"isolatedModules": true
-	}
+		"isolatedModules": true,
+		"skipLibCheck": true,
+		"paths": {
+			"@app/*": ["./src/*"]
+		}
+	},
+	"include": ["src/*", "test/*"]
 }
