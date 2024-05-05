@@ -24,8 +24,11 @@ export class Octree {
 	id: number;
 	#nodes: Tuple8<Octand>;
 
-	constructor(...nodes: Tuple8<Octand>) {
-		this.#nodes = <Tuple8<Octand>> nodes.slice(0);
+	constructor(...nodes: Octand[]) {
+		if (nodes.length > 8)
+			throw Error(`Too many nodes passed (${nodes.length} > 8)`);
+
+		this.#nodes = nodes.slice(0) as Tuple8<Octand>;
 	}
 
 	#bounds_check(n: number) {

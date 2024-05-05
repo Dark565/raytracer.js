@@ -47,11 +47,11 @@ export function node_at_pos(octree: Octree, dim: OctreeDim, pos: Point): [Octree
 		let rel_pos = pos.sub(next_dim.pos);
 		let ind_vec = rel_pos.scale(2/next_dim.size);
 		cur_node = next_node;
-		cur_index = (ind_vec.z<<2) + (ind_vec.y<<1) + (ind_vec.x<<0);
+		cur_index = (ind_vec.z <<2) + (ind_vec.y <<1) + (ind_vec.x <<0);
 		next_node = cur_node.get(cur_index);
 		next_dim.size /= 2;
 		for (let i = 0; i < 3; i++)
-			next_dim.pos.v[i] += (ind_vec.v[i]<<0) * next_dim.size;
+			next_dim.pos.v[i] += (ind_vec.v[i] <<0) * next_dim.size;
 	}
 
 	return [cur_node,cur_index];

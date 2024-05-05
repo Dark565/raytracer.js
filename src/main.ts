@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import * as linalg from './linalg';
+//import * as linalg from './linalg';
+import * as octops from 'octree_ops';
 
 function main() {
-	let v = linalg.vector(1,2,3);
+
 }
 
 main();

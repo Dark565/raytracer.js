@@ -20,7 +20,7 @@ export class Drawer {
 	px_img: ImageData;
 
 	constructor(canvas_id: string) {
-		let canvas = <HTMLCanvasElement> document.getElementById(canvas_id);
+		let canvas = document.getElementById(canvas_id) as HTMLCanvasElement;
 		this.ctx = canvas.getContext("2d");
 		this.img = this.ctx.createImageData(canvas.width, canvas.height);
 		this.px_img = this.ctx.createImageData(1,1);
