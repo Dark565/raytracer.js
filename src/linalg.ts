@@ -48,6 +48,18 @@ export class Vector {
 		};
 	}
 
+	get x(): number {
+		return this.v[0];
+	}
+
+	get y(): number {
+		return this.v[1];
+	}
+
+	get z(): number {
+		return this.v[2];
+	}
+
 	copy_from(x: Vector) {
 		this.v = x.v.slice(0);
 		this.size = x.size;
@@ -123,12 +135,19 @@ export class Vector {
 	}
 }
 
-export function vector(...numbers: number[]) {
+export function vector(...numbers: number[]): Vector {
 	return new Vector(numbers);
 }
 
+export type Point = Vector;
+
+export interface Line {
+	start: Point;
+	dir: Vector;
+}
+
 export interface Solid {
-	line_cross_point(start: Vector, dir: Vector): Vector[];
+	line_cross_point(line: Line): Vector[];
 }
 
 export class Plane implements Solid {
@@ -139,14 +158,14 @@ export class Plane implements Solid {
 		this.pos = pos;
 	}
 
-	line_cross_point(start: Vector, dir: Vector): Vector[] {
-		let denom = dir.dot(this.normal);
+	line_cross_point(line: Line): Vector[] {
+		let denom = line.dir.dot(this.normal);
 		if (denom == 0)
 			return [];
 
-		let off_dist = this.pos.sub(start);
+		let off_dist = this.pos.sub(line.start);
 		let ratio = off_dist.dot(this.normal) / denom;
-		return [start.add(dir.scale(ratio))];
+		return [line.start.add(line.dir.scale(ratio))];
 	}
 }
 
@@ -158,10 +177,10 @@ export class Sphere implements Solid {
 		this.radius = radius;
 	}
 
-	line_cross_point(start: Vector, dir: Vector): Vector[] {
-		let dist = start.sub(this.pos);
-		let a = dir.dot(dir);
-		let b = dist.dot(dir);
+	line_cross_point(line: Line): Vector[] {
+		let dist = line.start.sub(this.pos);
+		let a = line.dir.dot(line.dir);
+		let b = dist.dot(line.dir);
 		let c = dist.dot(dist) - this.radius*this.radius;
 		let delta = b*b - a*c*4;
 		if (delta < 0)
@@ -172,6 +191,6 @@ export class Sphere implements Solid {
 		let tmp2 = s_delta / (a*2);
 		let t1 = tmp1 - tmp2;
 		let t2 = tmp1 + tmp2;
-		return [start.add(dir.scale(t1)), start.add(dir.scale(t2))];
+		return [line.start.add(line.dir.scale(t1)), line.start.add(line.dir.scale(t2))];
 	}
 }

@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
+type Tuple8<T> = [T,T,T,T,T,T,T,T];
+export type Octand = Octree|any[];
+
 /**
 * A class abstracting a dynamic octree
 */
-
-type Tuple8<T> = [T,T,T,T,T,T,T,T];
-type Octand = Octree|any[];
-
 export class Octree {
 	id: number;
 	#nodes: Tuple8<Octand>;
