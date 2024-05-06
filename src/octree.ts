@@ -25,10 +25,13 @@ export class Octree {
 	#nodes: Tuple8<Octand>;
 
 	constructor(...nodes: Octand[]) {
-		if (nodes.length > 8)
-			throw Error(`Too many nodes passed (${nodes.length} > 8)`);
-
-		this.#nodes = nodes.slice(0) as Tuple8<Octand>;
+		if (nodes.length == 0) {
+			this.#nodes = Array(8).fill(null).map(()=>[]) as Tuple8<Octand>;
+		} else if (nodes.length == 8) {
+			this.#nodes = nodes.slice(0) as Tuple8<Octand>;
+		} else {
+			throw Error(`Invalid number of nodes passed (${nodes.length} != 8)`);
+		}
 	}
 
 	#bounds_check(n: number) {
@@ -49,5 +52,13 @@ export class Octree {
 		let old_value = this.#nodes[n];
 		this.#nodes[n] = value;
 		return old_value;
+	}
+
+	recurse_get(n: number): any[] {
+		let cur_node = this.get(n);
+		while (cur_node instanceof Octree)
+			cur_node = cur_node.get(n);
+
+		return cur_node;
 	}
 }

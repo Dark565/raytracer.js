@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Point, Vector } from 'linalg';
+import { Point, Vector } from '@app/linalg';
 
 export interface Space {
 	pos: Point;

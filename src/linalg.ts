@@ -140,6 +140,7 @@ export function vector(...numbers: number[]): Vector {
 }
 
 export type Point = Vector;
+export var point = vector;
 
 export interface Line {
 	start: Point;

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { Octree, Octand } from 'octree';
-import { vector, Vector, Point, Line } from 'linalg';
-import * as space from 'space';
+import { Octree, Octand } from '@app/octree';
+import { vector, Vector, Point, Line } from '@app/linalg';
+import * as space from '@app/space';
 
 /** The geometric parameters of the octree.
  *  The tree node should be interpreted as a big cube consisting of 8 smaller equal-sized cubes (nodes) adjacent to its vertices.
