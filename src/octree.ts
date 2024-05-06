@@ -24,7 +24,7 @@ export class Octree {
 	id: number;
 	#nodes: Tuple8<Octand>;
 
-	constructor(...nodes: Octand[]) {
+	constructor(id: number, ...nodes: Octand[]) {
 		if (nodes.length == 0) {
 			this.#nodes = Array(8).fill(null).map(()=>[]) as Tuple8<Octand>;
 		} else if (nodes.length == 8) {
@@ -32,6 +32,7 @@ export class Octree {
 		} else {
 			throw Error(`Invalid number of nodes passed (${nodes.length} != 8)`);
 		}
+		this.id = id;
 	}
 
 	#bounds_check(n: number) {
@@ -43,6 +44,14 @@ export class Octree {
 	get(n: number): Octand {
 		this.#bounds_check(n);
 		return this.#nodes[n];
+	}
+
+	get_tree(n: number): Octree {
+		let node = this.get(n);
+		if (!(node instanceof Octree))
+			throw Error("Node is not Octree");
+
+		return node;
 	}
 
 	/** Set the `n`-th node and get the old value */
