@@ -15,7 +15,7 @@
  */
 
 type Tuple8<T> = [T,T,T,T,T,T,T,T];
-export type Octand = Octree|any[];
+export type Octand = Octree|any;
 
 /**
 * A class abstracting a dynamic octree
@@ -26,11 +26,11 @@ export class Octree {
 
 	constructor(id: number, ...nodes: Octand[]) {
 		if (nodes.length == 0) {
-			this.#nodes = Array(8).fill(null).map(()=>[]) as Tuple8<Octand>;
-		} else if (nodes.length == 8) {
+			this.#nodes = Array(8) as Tuple8<Octand>;
+		} else if (nodes.length <= 8) {
 			this.#nodes = nodes.slice(0) as Tuple8<Octand>;
 		} else {
-			throw Error(`Invalid number of nodes passed (${nodes.length} != 8)`);
+			throw Error(`Invalid number of nodes passed (${nodes.length})`);
 		}
 		this.id = id;
 	}
@@ -46,7 +46,7 @@ export class Octree {
 		return this.#nodes[n];
 	}
 
-	get_tree(n: number): Octree {
+	subtree(n: number): Octree {
 		let node = this.get(n);
 		if (!(node instanceof Octree))
 			throw Error("Node is not Octree");

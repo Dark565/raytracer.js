@@ -33,7 +33,6 @@ export function* each_cross(octree: Octree, dim: OctreeDim, line: Line): Generat
 
 }
 
-/* TODO: Test this */
 export function node_at_pos(octree: Octree, dim: OctreeDim, pos: Point): [Octree,number]|undefined {
 	if (!space.point_in_space(pos, {pos: dim.pos, size: vector(dim.size,dim.size,dim.size)}))
 		return undefined;

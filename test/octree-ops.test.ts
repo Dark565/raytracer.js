@@ -38,8 +38,8 @@ test('point_at_pos() discrete tests', ()=>{
 	let otree_dim = { pos: point(0,0,0), size: 1 };
 
 	otree.set(3, new Octree(1));
-	otree.get_tree(3).set(5, new Octree(2));
+	otree.subtree(3).set(5, new Octree(2));
 
 	let node_desc = ops.node_at_pos(otree, otree_dim, point(0.75,0.5,0.25));
-	expect(node_desc).toEqual([otree.get_tree(3).get_tree(5), 0]);
+	expect(node_desc).toEqual([otree.subtree(3).subtree(5), 0]);
 });
