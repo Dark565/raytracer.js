@@ -45,11 +45,19 @@ export class Drawer {
 	}
 
 	draw_line(from: number[], to: number[], width: number, color: number[]) {
+		this.ctx.strokeStyle = Drawer.#color_vec_to_css(color);
 		this.ctx.lineWidth = width
 		this.ctx.beginPath();
 		this.ctx.moveTo(from[0], from[1]);
 		this.ctx.lineTo(to[0], to[1]);
 		this.ctx.stroke();
+	}
+
+	draw_square(pos: number[], size: number, width: number, color: number[]) {
+		this.draw_line(pos, [pos[0]+size,pos[1]], width, color);
+		this.draw_line(pos, [pos[0],pos[1]+size], width, color);
+		this.draw_line([pos[0],pos[1]+size], pos.map((x)=>x+size), width, color);
+		this.draw_line([pos[0]+size,pos[1]], pos.map((x)=>x+size), width, color);
 	}
 
 	draw_pixel(x: number, y: number, color: number[]) {
@@ -59,4 +67,9 @@ export class Drawer {
 		img_data[2] = color[2];
 		this.ctx.putImageData(this.px_img, x, y);
 	};
+
+	static #color_vec_to_css(color: number[]): string {
+		let color_str = color.map((x)=>(x&0xff).toString(16).replace(/^\d$/,(x)=>`0${x}`));
+		return `#${color_str[0]}${color_str[1]}${color_str[2]}`
+	}
 };

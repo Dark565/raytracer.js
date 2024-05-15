@@ -1,17 +1,17 @@
 import {point, vector, Point, Line, Plane} from '@app/linalg';
 
-type Quadrant<T> = Quadtree<T>|T|undefined;
+export type Quadrant<T> = Quadtree<T>|T|undefined;
 
 /** The dimensions of the quad tree.
  *  @param{pos} The position of the tree relative to the vertex adjacent to the first node.
  *  @param{size} The size of an edge.
  */
-interface QuadTreeDim {
+export interface QuadTreeDim {
 	pos:  Point;
 	size: number;
 }
 
-class Quadtree<T> {
+export class Quadtree<T> {
 	#nodes: Quadrant<T>[];
 	dim: QuadTreeDim;
 
@@ -49,12 +49,12 @@ class Quadtree<T> {
 	}
 }
 
-function* each_cross<T>(tree: Quadtree<T>, line: Line): Generator<[Quadtree<T>,number]> {
+export function* each_cross<T>(tree: Quadtree<T>, line: Line): Generator<[Quadtree<T>,number]> {
 	let rec_fn = function*(lvl: number, subtree: Quadtree<T>) {
 		let half_size = subtree.dim.size/2;
 		let mid_point = point(subtree.dim.pos.x+half_size, subtree.dim.pos.y+half_size);
-		let axis_y = new Plane(mid_point, vector(1,0)); // y axis
-		let axis_x = new Plane(mid_point, vector(0,1)); // x axis
+		let axis_y = new Plane(vector(1,0), mid_point); // y axis
+		let axis_x = new Plane(vector(0,1), mid_point); // x axis
 		let cross_y = axis_y.line_cross_point(line);
 		let cross_x = axis_x.line_cross_point(line);
 		let y_mid_dist = cross_y[0].sub(mid_point);
@@ -81,13 +81,15 @@ const NODE_CROSS_LUT = BigInt("0x8421a5a5cc33edb7");
 
 function get_crossed_indices(dim: QuadTreeDim, cross_x: number, cross_y: number): number[] {
 
+
 	let half_size = dim.size/2;
 	let cross_logic = (Number(cross_x >= 0)) | (Number(cross_y >= 0) << 1) 
-			| (Number(Math.abs(cross_x) > half_size) << 2) | (Number(Math.abs(cross_y) > half_size) << 3);
+			| (Number(Math.abs(cross_x) >= half_size) << 2) | (Number(Math.abs(cross_y) >= half_size) << 3);
 
-	let node_vec = Number((NODE_CROSS_LUT >> BigInt(cross_logic << 2)) & BigInt(0xf));
+	//console.log(`cross_logic: ${cross_logic.toString(2)}`);
+	let node_vec = Number((NODE_CROSS_LUT >> BigInt(cross_logic<<2)) & BigInt(0xf));
 	let res_list = [];
-	for (let i = 0; i < 4; i++, node_vec >> 1) {
+	for (let i = 0; i < 4; i++, node_vec >>= 1) {
 		if (node_vec & 1) res_list.push(i);
 	}
 

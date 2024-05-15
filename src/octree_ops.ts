@@ -15,7 +15,7 @@
  */
 
 import { Octree, Octand } from '@app/octree';
-import { vector, Vector, Point, Line } from '@app/linalg';
+import { vector, Vector, Point, Plane, Line, } from '@app/linalg';
 import * as space from '@app/space';
 
 /** The geometric parameters of the octree.
@@ -28,9 +28,8 @@ export interface OctreeDim {
 	size: number;
 }
 
-/** A generator iterating over all existing octree nodes which are crossed by a line. */
+/** A generator iterating over all (non subtree) octree nodes which are crossed by a line starting at line.start. */
 export function* each_cross(octree: Octree, dim: OctreeDim, line: Line): Generator<[Octree,number]> {
-
 }
 
 export function node_at_pos(octree: Octree, dim: OctreeDim, pos: Point): [Octree,number]|undefined {
