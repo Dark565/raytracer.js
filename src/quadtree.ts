@@ -49,8 +49,20 @@ export class Quadtree<T> {
 	}
 }
 
+export var each_cross_n_rec = 0;
+export var each_cross_n_rec_max = 0;
+export var each_cross_n_rec_total = 0;
+export var each_cross_n_invocate = 0;
+
 export function* each_cross<T>(tree: Quadtree<T>, line: Line): Generator<[Quadtree<T>,number]> {
+
+	let n_rec = 0;
+	each_cross_n_invocate++;
+
 	let rec_fn = function*(lvl: number, subtree: Quadtree<T>) {
+		n_rec++;
+		each_cross_n_rec_total++;
+
 		let half_size = subtree.dim.size/2;
 		let mid_point = point(subtree.dim.pos.x+half_size, subtree.dim.pos.y+half_size);
 		let axis_y = new Plane(vector(1,0), mid_point); // y axis
@@ -71,6 +83,11 @@ export function* each_cross<T>(tree: Quadtree<T>, line: Line): Generator<[Quadtr
 		}
 	}
 	yield* rec_fn(0,tree);
+
+	each_cross_n_rec = n_rec;
+	if (n_rec > each_cross_n_rec_max)
+		each_cross_n_rec_max = n_rec;
+
 }
 
 /** This LUT maps 4-element axis-cross logic vector to the 4-element vector of crossed quadtree nodes.
