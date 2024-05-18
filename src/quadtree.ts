@@ -53,11 +53,13 @@ export var each_cross_n_rec = 0;
 export var each_cross_n_rec_max = 0;
 export var each_cross_n_rec_total = 0;
 export var each_cross_n_invocate = 0;
+export var each_cross_logic_freq: number[] = Array(8).fill(0);
 
 export function* each_cross<T>(tree: Quadtree<T>, line: Line): Generator<[Quadtree<T>,number]> {
 
 	let n_rec = 0;
 	each_cross_n_invocate++;
+	let cross_logic_distrib = Array(16).fill(0);
 
 	let rec_fn = function*(lvl: number, subtree: Quadtree<T>) {
 		n_rec++;
@@ -71,7 +73,13 @@ export function* each_cross<T>(tree: Quadtree<T>, line: Line): Generator<[Quadtr
 		let cross_x = axis_x.line_cross_point(line);
 		let y_mid_dist = cross_y[0].sub(mid_point);
 		let x_mid_dist = cross_x[0].sub(mid_point);
-		let crossed_nodes = get_crossed_indices(subtree.dim, x_mid_dist.x, y_mid_dist.y);
+
+	  let cross_logic = (Number(x_mid_dist.x >= 0)) | (Number(y_mid_dist.y >= 0) << 1) 
+				| (Number(Math.abs(x_mid_dist.x) >= half_size) << 2) | (Number(Math.abs(y_mid_dist.y) >= half_size) << 3);
+
+		cross_logic_distrib[cross_logic] += 1;
+
+		let crossed_nodes = get_crossed_indices(subtree.dim, cross_logic);
 		for (let i of crossed_nodes) {
 			let node = subtree.get(i);
 			// let subdim = { pos: subtree.dim.pos.add(vector( (i&1) * half_size, (i>>1) * half_size )), size: half_size };
@@ -88,28 +96,29 @@ export function* each_cross<T>(tree: Quadtree<T>, line: Line): Generator<[Quadtr
 	if (n_rec > each_cross_n_rec_max)
 		each_cross_n_rec_max = n_rec;
 
+	each_cross_logic_freq = cross_logic_distrib;
 }
 
-/** This LUT maps 4-element axis-cross logic vector to the 4-element vector of crossed quadtree nodes.
+/** This LUT maps 4-element axis-cross logic vector to the 9-bit ordered sequence of crossed nodes.
  *  The logic vector is defined as (from least significant bit to the most):
  *  x_above_middle, y_above_middle, x_exceeds_dim, y_exceeds_dim.
  */
-const NODE_CROSS_LUT = BigInt("0x8421a5a5cc33edb7");
+//const NODE_CROSS_LUT = BigInt("0x8421a5a5cc33edb7");
+const NODE_CROSS_LUT = BigInt("0x200c040111064441911870220a7146622ca");
 
-function get_crossed_indices(dim: QuadTreeDim, cross_x: number, cross_y: number): number[] {
+function get_crossed_indices(dim: QuadTreeDim, cross_logic: number): number[] {
 
+	//let half_size = dim.size/2;
+	//let cross_logic = (Number(cross_x >= 0)) | (Number(cross_y >= 0) << 1) 
+	//		| (Number(Math.abs(cross_x) >= half_size) << 2) | (Number(Math.abs(cross_y) >= half_size) << 3);
 
-	let half_size = dim.size/2;
-	let cross_logic = (Number(cross_x >= 0)) | (Number(cross_y >= 0) << 1) 
-			| (Number(Math.abs(cross_x) >= half_size) << 2) | (Number(Math.abs(cross_y) >= half_size) << 3);
-
+	let res = [];
 	//console.log(`cross_logic: ${cross_logic.toString(2)}`);
-	let node_vec = Number((NODE_CROSS_LUT >> BigInt(cross_logic<<2)) & BigInt(0xf));
-	let res_list = [];
-	for (let i = 0; i < 4; i++, node_vec >>= 1) {
-		if (node_vec & 1) res_list.push(i);
+	let node_vec = Number((NODE_CROSS_LUT >> BigInt(cross_logic*9)) & BigInt(0x1ff));
+	for (; node_vec > 0; node_vec >>= 3) {
+		let node_i = node_vec & 0x7;
+		if (node_i > 0) res.push(node_i - 1);
 	}
 
-	return res_list;
-
+	return res;
 }
