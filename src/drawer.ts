@@ -60,6 +60,18 @@ export class Drawer {
 		this.draw_line([pos[0]+size,pos[1]], pos.map((x)=>x+size), width, color);
 	}
 
+	draw_filled_square(pos: number[], size: number, color: number[]) {
+		this.ctx.fillStyle = Drawer.#color_vec_to_css(color);
+		this.ctx.beginPath();
+		this.ctx.moveTo(pos[0], pos[1]);
+		this.ctx.lineTo(pos[0]+size,pos[1]);
+		this.ctx.lineTo(pos[0],pos[1]+size);
+		this.ctx.moveTo(pos[0]+size, pos[1]+size);
+		this.ctx.lineTo(pos[0]+size, pos[1]);
+		this.ctx.lineTo(pos[0], pos[1]+size);
+		this.ctx.fill();
+	}
+
 	draw_pixel(x: number, y: number, color: number[]) {
 		let img_data = this.px_img.data;
 		img_data[0] = color[0];
