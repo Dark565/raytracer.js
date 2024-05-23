@@ -1,4 +1,5 @@
 import {point, vector, Point, Line, Plane} from '@app/linalg';
+import {point_in_space} from '@app/space';
 
 export type Quadrant<T> = Quadtree<T>|T|undefined;
 
@@ -12,11 +13,13 @@ export interface QuadTreeDim {
 }
 
 export class Quadtree<T> {
+	parent?: Quadtree<T>;
 	#nodes: Quadrant<T>[];
 	dim: QuadTreeDim;
 
-	constructor(dim: QuadTreeDim, nodes?: Array<Quadrant<T>>) {
-		this.#nodes = nodes === undefined ? Array(4).fill(undefined) : nodes.slice(0);
+	constructor(dim: QuadTreeDim, nodes?: Array<Quadrant<T>>, parent?: Quadtree<T>) {
+		this.parent = parent;
+		this.#nodes = nodes == undefined ? Array(4).fill(undefined) : nodes.slice(0);
 		this.dim = dim;
 	}
 
@@ -44,22 +47,59 @@ export class Quadtree<T> {
 		let half_size = this.dim.size/2;
 		let subdim = { pos: this.dim.pos.add(vector( (n&1) * half_size, (n>>1) * half_size )), size: half_size };
 
-		let subtree = this.#nodes[n] = new Quadtree<T>(subdim);
+		let subtree = this.#nodes[n] = new Quadtree<T>(subdim, [], this);
 		return subtree;
+	}
+
+
+	*each_ancestor(): Generator<Quadtree<T>> {
+		let node: Quadtree<T> = this;
+		do {
+			yield node;
+			node = node.parent;
+		} while (node instanceof Quadtree);
+	}
+
+	get_root(): Quadtree<T> {
+		let node: Quadtree<T>;
+		for (let ancestor of this.each_ancestor())
+			node = ancestor;
+
+		return node;
+	}
+
+	branch_level(): number {
+		let count = 0;
+		for (let _ of this.each_ancestor())
+			count++;
+
+		return count-1;
 	}
 }
 
+/* Debug variables */
 export var each_cross_n_rec = 0;
 export var each_cross_n_rec_max = 0;
 export var each_cross_n_rec_total = 0;
 export var each_cross_n_invocate = 0;
 export var each_cross_logic_freq: number[] = Array(8).fill(0);
 
-export function* each_cross<T>(tree: Quadtree<T>, line: Line): Generator<[Quadtree<T>,number]> {
+export function* each_cross<T>(tree: Quadtree<T>, line: Line, flags: { respect_start?: boolean } = {}): Generator<[Quadtree<T>,number]> {
 
 	let n_rec = 0;
 	each_cross_n_invocate++;
 	let cross_logic_distrib = Array(16).fill(0);
+
+	let start_point_found = true;
+	if (flags.respect_start && 
+			point_in_space(line.start, {pos: tree.dim.pos, size: vector(tree.dim.size,tree.dim.size)})) {
+			
+		  start_point_found = false;
+	}
+
+	let dir_seq_modifier = (_: number[]) => {};
+	if (line.dir.y > 0)
+		dir_seq_modifier = (seq: number[]) => seq.reverse();
 
 	let rec_fn = function*(lvl: number, subtree: Quadtree<T>) {
 		n_rec++;
@@ -79,16 +119,32 @@ export function* each_cross<T>(tree: Quadtree<T>, line: Line): Generator<[Quadtr
 
 		cross_logic_distrib[cross_logic] += 1;
 
-		let crossed_nodes = get_crossed_indices(subtree.dim, cross_logic);
-		for (let i of crossed_nodes) {
+		let cross_seq = get_crossed_nodes_seq(cross_logic);
+		dir_seq_modifier(cross_seq);
+
+		if (!start_point_found) {
+			let rel_pos = line.start.sub(subtree.dim.pos);
+			let ind_vec = rel_pos.scale(1/half_size);
+			let point_i = (ind_vec.y <<1) + (ind_vec.x <<0);
+
+			cross_seq.splice(0,cross_seq.indexOf(point_i)+1);
+			let node = subtree.get(point_i);
+			if (node instanceof Quadtree) {
+				yield* rec_fn(lvl+1, node);
+			} else {
+				yield [subtree,point_i];
+				start_point_found = true;
+			}
+		}
+
+		for (let i of cross_seq) {
 			let node = subtree.get(i);
-			// let subdim = { pos: subtree.dim.pos.add(vector( (i&1) * half_size, (i>>1) * half_size )), size: half_size };
 			if (node instanceof Quadtree) {
 				yield* rec_fn(lvl+1, node);
 			} else {
 				yield [subtree,i];
 			}
-		}
+		}	
 	}
 	yield* rec_fn(0,tree);
 
@@ -103,21 +159,22 @@ export function* each_cross<T>(tree: Quadtree<T>, line: Line): Generator<[Quadtr
  *  The logic vector is defined as (from least significant bit to the most):
  *  x_above_middle, y_above_middle, x_exceeds_dim, y_exceeds_dim.
  */
-//const NODE_CROSS_LUT = BigInt("0x8421a5a5cc33edb7");
-const NODE_CROSS_LUT = BigInt("0x200c040111064441911870220a7146622ca");
+const NODE_CROSS_LUT = BigInt("0x8421a5a5cc33edb7");
+const NODE_ORD_LUT   = 0x1e4b87d2;
+/// const NODE_CROSS_LUT = BigInt("0x200c040111064441911870220a7146622ca");
+// const NODE_CROSS_LUT = BigInt("0x200c04010a02c280b1188c221151c66228b");
 
-function get_crossed_indices(dim: QuadTreeDim, cross_logic: number): number[] {
+function get_crossed_nodes_seq(cross_logic: number): number[] {
 
-	//let half_size = dim.size/2;
-	//let cross_logic = (Number(cross_x >= 0)) | (Number(cross_y >= 0) << 1) 
-	//		| (Number(Math.abs(cross_x) >= half_size) << 2) | (Number(Math.abs(cross_y) >= half_size) << 3);
-
+	let order = NODE_ORD_LUT >> ((cross_logic & 0x3) << 3);
 	let res = [];
-	//console.log(`cross_logic: ${cross_logic.toString(2)}`);
-	let node_vec = Number((NODE_CROSS_LUT >> BigInt(cross_logic*9)) & BigInt(0x1ff));
-	for (; node_vec > 0; node_vec >>= 3) {
-		let node_i = node_vec & 0x7;
-		if (node_i > 0) res.push(node_i - 1);
+
+	let cross_vec = Number((NODE_CROSS_LUT >> BigInt(cross_logic << 2)) & BigInt(0xf));
+
+	for (let i = 0; i < 4; i++) {
+		let node_i = (order >> (i<<1)) & 0x3;
+		if (cross_vec & (1 << node_i))
+			res.push(node_i);
 	}
 
 	return res;
