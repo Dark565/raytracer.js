@@ -15,6 +15,7 @@
  */
 
 import { Octree, Octand } from '@app/octree';
+import { NODE_CROSS_MAP, NODE_ORDER_MAP } from '@app/octree_const';
 import { vector, Vector, Point, Plane, Line, } from '@app/linalg';
 import * as space from '@app/space';
 
@@ -26,10 +27,6 @@ import * as space from '@app/space';
 export interface OctreeDim {
 	pos: Point;
 	size: number;
-}
-
-/** A generator iterating over all (non subtree) octree nodes which are crossed by a line starting at line.start. */
-export function* each_cross(octree: Octree, dim: OctreeDim, line: Line): Generator<[Octree,number]> {
 }
 
 export function node_at_pos(octree: Octree, dim: OctreeDim, pos: Point): [Octree,number]|undefined {
@@ -53,4 +50,8 @@ export function node_at_pos(octree: Octree, dim: OctreeDim, pos: Point): [Octree
 	}
 
 	return [cur_node,cur_index];
+}
+
+/** A generator iterating over all (non subtree) octree nodes which are crossed by a line starting at line.start. */
+export function* each_cross(octree: Octree, dim: OctreeDim, line: Line, flags?: { respect_start?: boolean } = {}): Generator<[Octree,number]> {
 }
