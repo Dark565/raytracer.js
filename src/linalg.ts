@@ -86,7 +86,7 @@ export class Vector {
 
 	cross(v2: Vector) {
 		if (this.size != 3 || v2.size != 3)
-			throw new VectorError("cross product is defined only for 3-element vectors");
+			throw new VectorError("cross product is defined only for 3-dimensional vectors");
 
 		let res = new Vector;
 		res.v[0] = this.v[1]*v2.v[2] - this.v[2]*v2.v[1];
@@ -132,6 +132,42 @@ export class Vector {
 			res.v[i] /= len;
 
 		return res;
+	}
+
+	/** Return a copy of the vector extended to n dimensions.
+	 * New fields are filled with zeros.
+	 */
+	extend(n: number): Vector {
+		if (n < this.size)
+			throw Error("Requested less dimensions that the vector currently operates on");
+
+		return vector(...this.v, ...Array(n - this.size));
+	}
+
+	/** Rotate the 2d vector along the xy plane. */
+	rotate_2d(angle: number): Vector {
+		if (this.size != 2)
+			throw Error("Vector must be 2 dimensional.")
+
+		let base_y = vector(-this.y, this.x);
+
+		let [sin, cos] = [Math.sin(angle), Math.cos(angle)];
+		return this.scale(cos).add(base_y.scale(sin))
+	}
+
+	/** Rotate the 3d vector around the normal vector.
+	 * There is no verification for right angle thus
+	 * the transformation will be uneven if the angle isn't right.
+	 */
+	rotate_normal(normal: Vector, angle: number): Vector {
+		if (this.size != 3 && normal.size != 3)
+			throw Error("Vectors must be 3 dimensional");
+
+		let base_y = this.cross(normal);
+		base_y = base_y.scale(Math.sqrt(this.length_sq()/base_y.length_sq()));
+
+		let [sin, cos] = [Math.sin(angle), Math.cos(angle)];
+		return this.scale(cos).add(base_y.scale(sin))
 	}
 }
 
