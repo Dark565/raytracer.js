@@ -68,12 +68,13 @@ export function index_within_parent<T>(child: SpaceOctree<T>): number {
 	return (ind_vec.z <<2) + (ind_vec.y <<1) + (ind_vec.x <<0);
 }
 
-export interface OctreeWalkerCursor<T> {
+interface OctreeWalkerCursor<T> {
 	tree: SpaceOctree<T>;
 	//node: number;
 	start_point?: Point;
 	direction?: Vector;
-	cross_logic?: { logic: number, order: number[] }, 
+	order_prepare_fn: (ord: number[]) => number[];
+	cross_logic?: { logic: number, order: number[] };
 }
 
 
@@ -89,18 +90,26 @@ export class OctreeWalker<T> {
 
 		this.cursor = { 
 			tree: point_node[0],
-			//node: point_node[1],
-			start_point: start_point,
-			direction: direction
+			order_prepare_fn: OctreeWalker.order_prepare_default
 		};
+
+		this.start_point = start_point;
+		this.direction   = direction;
 	}
 
 	set start_point(point: Point) {
 		this.cursor.start_point = point;
 	}
 
+	private static order_prepare_default(ord: number[]): number[] { return ord; }
+	private static order_prepare_reverse(ord: number[]): number[] { return ord.reverse(); }
+
 	set direction(dir: Vector) {
 		this.cursor.direction = dir;
+		if (dir != undefined) {
+			const dir_prepare_fns = [OctreeWalker.order_prepare_default, OctreeWalker.order_prepare_reverse];
+			this.cursor.order_prepare_fn = dir_prepare_fns[Number(dir.z >= 0) ^ Number(dir.y >= 0)];
+		}
 	}
 
 	get start_point() {
@@ -201,7 +210,6 @@ export class OctreeWalker<T> {
 		this.setup_order();
 	}
 
-	/* TODO: Handle order turn */
 	private setup_order() {
 		console.assert(this.cursor.tree != undefined);
 		console.assert(this.cursor.start_point != undefined);
@@ -226,8 +234,9 @@ export class OctreeWalker<T> {
 		});
 
 		const order_index = Number((NODE_ORDER_MAP >> BigInt(logic_vec << 1)) & BigInt(0x3));
-		const order_sequence = NODE_ORDERS[order_index];
-		this.cursor.cross_logic = { logic: logic_vec, order: order_sequence.slice() };
+		let order_sequence = this.cursor.order_prepare_fn(NODE_ORDERS[order_index].slice());
+
+		this.cursor.cross_logic = { logic: logic_vec, order: order_sequence };
 	}
 
 	private is_crossed(n: number): boolean {
