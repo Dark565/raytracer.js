@@ -76,6 +76,7 @@ export interface OctreeWalkerCursor<T> {
 	cross_logic?: { logic: number, order: number[] }, 
 }
 
+
 export class OctreeWalker<T> {
 	private tree: SpaceOctree<T>;
 	private cursor: OctreeWalkerCursor<T>;
@@ -157,26 +158,37 @@ export class OctreeWalker<T> {
 		this.prepare_order();
 	}
 
-	/* TODO: Handle node searching if this.cursor.node is undefined */
+	private is_cursor_tree_invalid() {
+		return this.cursor.tree == undefined || this.cursor.tree.is_invalid();
+	}
+
 	private reset_cursor_tree_if_invalid() {
-		if (!this.cursor.tree.is_invalid())
+		if (!this.is_cursor_tree_invalid())
 			return;
 
 		let tree: SpaceOctree<T>;
-		let prev_tree = this.cursor.tree;
-		do {
-			tree = prev_tree;
-			prev_tree = tree.parent;
-		} while (prev_tree != null && prev_tree.is_invalid());
+		if (this.cursor.tree != undefined) {
+			let prev_tree = this.cursor.tree;
+			do {
+				tree = prev_tree;
+				prev_tree = tree.parent;
+			} while (prev_tree != null && prev_tree.is_invalid());
 
-		if (prev_tree == null)
-			throw Error("there is no valid ancestor to return to");
+			if (prev_tree == null) {
+				if (!this.tree.is_invalid())
+					tree = this.tree;
+				else
+					throw Error("there is no valid ancestor to return to");	
+			}
+		} else {
+			tree = this.tree;
+		}
 
 		let new_cur_node = node_at_pos(tree, this.dim, this.cursor.start_point);
 		if (new_cur_node != null) {
 			this.cursor.tree = new_cur_node[0];
 		} else {
-			this.cursor.tree = prev_tree;
+			this.cursor.tree = tree;
 		}
 
 		this.cursor.cross_logic = undefined;
@@ -264,7 +276,6 @@ export class OctreeWalker<T> {
 			if (this.cursor.cross_logic.order.length > 0)
 				return parent;
 		}
-		return null;
 	}
 
 	/* Step inside a subtree. */
