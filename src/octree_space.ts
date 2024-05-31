@@ -57,6 +57,21 @@ export function node_at_pos<T>(octree: SpaceOctree<T>, dim: OctreeDim, pos: Poin
 	return [cur_node,cur_index];
 }
 
+export function new_subtree<T>(tree: SpaceOctree<T>, n: number, flags: { allow_replace?: boolean } = {}): SpaceOctree<T> {
+	if (!flags.allow_replace && tree.get(n) != undefined)
+		throw Error("Child already defined");
+
+	const half_size = tree.id.size/2;
+	const subdim: OctreeDim = { 
+		pos: tree.id.pos.add(vector((n&1), ((n>>1)&1), ((n>>2)&1)).scale(half_size)),
+		size: half_size
+	};
+
+	const subtree = new Octree<T,OctreeDim>(subdim);
+	tree.set(n, subtree);
+	return subtree;
+}
+
 export function index_within_parent<T>(child: SpaceOctree<T>): number {
 	const parent = child.parent;
 	if (parent == null)
@@ -120,7 +135,7 @@ export class OctreeWalker<T> {
 		return this.cursor.direction;
 	}
 
-	next(flags?: { include_undefined?: boolean }): [SpaceOctree<T>,number]|null {
+	next(flags: { include_undefined?: boolean } = {}): [SpaceOctree<T>,number]|null {
 		this.prepare_to_walk();
 
 		let next_index: number;
@@ -140,7 +155,7 @@ export class OctreeWalker<T> {
 		return null;
 	}
 
-	*each_cross(flags?: { include_undefined?: boolean }) {
+	*each_cross(flags: { include_undefined?: boolean } = {}) {
 		let next_node: [SpaceOctree<T>, number];
 		while ((next_node = this.next(flags)) != null)
 			yield next_node;
