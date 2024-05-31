@@ -15,7 +15,7 @@
  */
 
 //import * as linalg from './linalg';
-import * as octops from 'octree_ops';
+import * as octops from 'octree_space';
 
 function main() {
 

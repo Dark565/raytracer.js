@@ -83,28 +83,31 @@ export function index_within_parent<T>(child: SpaceOctree<T>): number {
 	return (ind_vec.z <<2) + (ind_vec.y <<1) + (ind_vec.x <<0);
 }
 
+/** OctreeWalker cursor state */
 interface OctreeWalkerCursor<T> {
-	tree: SpaceOctree<T>;
-	//node: number;
+	/** The current tree on the cursor's position */
+	tree?: SpaceOctree<T>;
+	/** The current node on the cursor's position */
+	node?: number;
+	/** The start point of the ray */
 	start_point?: Point;
+	/** The direction of the ray */
 	direction?: Vector;
+	/** A function which alters the order array */
 	order_prepare_fn: (ord: number[]) => number[];
+	/** Information about intersections at the current tree */
 	cross_logic?: { logic: number, order: number[] };
 }
 
-
+/** OctreeWalker traces a ray casted through the Octree */
 export class OctreeWalker<T> {
 	private tree: SpaceOctree<T>;
 	private cursor: OctreeWalkerCursor<T>;
-	private dim: OctreeDim;
 
-	constructor(tree: SpaceOctree<T>, dim: OctreeDim, start_point?: Point, direction?: Vector) {
+	constructor(tree: SpaceOctree<T>, start_point?: Point, direction?: Vector) {
 		this.tree = tree;
-		this.dim = dim;
-		let point_node = node_at_pos(tree, dim, start_point);
 
-		this.cursor = { 
-			tree: point_node[0],
+		this.cursor = {
 			order_prepare_fn: OctreeWalker.order_prepare_default
 		};
 
@@ -139,15 +142,20 @@ export class OctreeWalker<T> {
 		this.prepare_to_walk();
 
 		let next_index: number;
-
 		do {
+			if (this.cursor.tree.is_invalid())
+				continue;
+
 			while ((next_index = this.order_shift_next()) != null) {
 				const child = this.cursor.tree.get(next_index);
 				if (this.is_crossed(next_index) && (flags.include_undefined || child != undefined)) {
-					if (child instanceof Octree)
+					if (child instanceof Octree) {
 						this.step_in(child);
-					else
+					}
+					else {
+						this.cursor.node = next_index;
 						return [this.cursor.tree,next_index];
+					}
 				}
 			}
 		} while (this.step_back());
@@ -161,14 +169,17 @@ export class OctreeWalker<T> {
 			yield next_node;
 	}
 
-	*[Symbol.iterator]() {
-		yield* this.each_cross();
-	}
-
-	private set_cursor_tree(tree: SpaceOctree<T>) {
+	/** Set the cursor position to the specified tree and node and set up the order.
+	 *  The order will start at a node `node` or after that node if flags.exclude_node is true. */
+	private set_cursor_pos(tree: SpaceOctree<T>, node: number, flags: { exclude_node?: boolean } = {} ) {
 		this.cursor.tree = tree;
+		this.cursor.node = node;
 		this.cursor.cross_logic = undefined;
 		this.setup_order();
+		if (flags.exclude_node && this.cursor.cross_logic.order[0] == node) {
+			this.cursor.cross_logic.order.shift();
+			this.cursor.node = this.cursor.cross_logic.order[0];
+		}
 	}
 
 	private prepare_to_walk() {
@@ -178,51 +189,14 @@ export class OctreeWalker<T> {
 		if (this.cursor.direction == undefined)
 			throw Error("direction undefined; please set direction");
 
-		this.reset_cursor_tree_if_invalid();
-		this.prepare_order();
+		this.validate_cursor_pos();
 	}
 
-	private is_cursor_tree_invalid() {
-		return this.cursor.tree == undefined || this.cursor.tree.is_invalid();
-	}
-
-	private reset_cursor_tree_if_invalid() {
-		if (!this.is_cursor_tree_invalid())
+	private validate_cursor_pos() {
+		if (this.cursor.tree != undefined)
 			return;
 
-		let tree: SpaceOctree<T>;
-		if (this.cursor.tree != undefined) {
-			let prev_tree = this.cursor.tree;
-			do {
-				tree = prev_tree;
-				prev_tree = tree.parent;
-			} while (prev_tree != null && prev_tree.is_invalid());
-
-			if (prev_tree == null) {
-				if (!this.tree.is_invalid())
-					tree = this.tree;
-				else
-					throw Error("there is no valid ancestor to return to");	
-			}
-		} else {
-			tree = this.tree;
-		}
-
-		let new_cur_node = node_at_pos(tree, this.dim, this.cursor.start_point);
-		if (new_cur_node != null) {
-			this.cursor.tree = new_cur_node[0];
-		} else {
-			this.cursor.tree = tree;
-		}
-
-		this.cursor.cross_logic = undefined;
-	}
-
-	private prepare_order() {
-		if (this.cursor.cross_logic != undefined)
-			return;
-
-		this.setup_order();
+		this.set_cursor_pos(this.tree, undefined);
 	}
 
 	private setup_order() {
@@ -239,26 +213,31 @@ export class OctreeWalker<T> {
 		[[1,2],[0,2],[0,1]].forEach((x,i) => {
 			const axis_bit = 1<<i;
 			const plane = new Plane(vector(axis_bit&1, axis_bit&2, axis_bit&4), mid_point);
-			const cross_point = plane.line_cross_point(line);
+			const cross_point = plane.line_intersection(line, { allow_infinity: true });
+			console.log(cross_point[0].v);
 			const a1_ae_middle = (cross_point[0].v[x[0]] >= mid_point.v[x[0]]);
 			const a2_ae_middle = (cross_point[0].v[x[1]] >= mid_point.v[x[1]]);
 			const a1_of = (Math.abs(cross_point[0].v[x[0]] - mid_point.v[x[0]]) >= half_size);
 			const a2_of = (Math.abs(cross_point[0].v[x[1]] - mid_point.v[x[1]]) >= half_size);
 			logic_vec |= (Number(a1_ae_middle) | (Number(a2_ae_middle) << 1)) << (i << 1);
 			logic_vec |= Number(a1_of || a2_of) << (6 + i);
+			console.log((Number(a1_ae_middle) | Number(a2_ae_middle)<<1).toString(2).padStart(2,'0'));
+			console.log(logic_vec.toString(2).padStart(9, '0'));
 		});
 
 		const order_index = Number((NODE_ORDER_MAP >> BigInt(logic_vec << 1)) & BigInt(0x3));
 		let order_sequence = this.cursor.order_prepare_fn(NODE_ORDERS[order_index].slice());
-
 		this.cursor.cross_logic = { logic: logic_vec, order: order_sequence };
+		this.order_shift_until(this.cursor.node);
 	}
 
 	private is_crossed(n: number): boolean {
 		if (!Octree.is_at_bounds(n))
-			throw Error("child index out of bounds");
+			throw Error(`child index (${n} out of bounds`);
 
 		const logic = this.cursor.cross_logic.logic;
+
+		//console.log(`cross logic for ${n}: ${logic.toString(2).padStart(9,'0')}`)
 
     const p_yz  = logic & 0x3;
     const p_xz  = logic>>2 & 0x3;
@@ -266,6 +245,13 @@ export class OctreeWalker<T> {
     const of_yz = Boolean(logic & 0x40);
     const of_xz = Boolean(logic & 0x80);
     const of_xy = Boolean(logic & 0x100);
+
+		//console.log(`p_yz: ${p_yz}`)
+		//console.log(`p_xz: ${p_xz}`)
+		//console.log(`p_xy: ${p_xy}`)
+		//console.log(`of_yz: ${of_yz}`)
+		//console.log(`of_xz: ${of_xz}`)
+		//console.log(`of_xy: ${of_xy}`)
 
 		const s_yz = n>>1 & 3;
 		const s_xz = (n>>1 & 2) | (n&1);
@@ -282,28 +268,31 @@ export class OctreeWalker<T> {
 
 	private order_shift_n_elem(n: number) {
 		if (!Octree.is_at_bounds(n))
-			throw Error("child index out of bounds");
+			return;
 
 		let ord_arr = this.cursor.cross_logic.order;
 		for (let i = 0; i < n; i++)
 			ord_arr.shift();
 	}
 
-	/** Step back to the first tree of interest. */
+	private order_shift_until(n: number) {
+		const n_index = this.cursor.cross_logic.order.indexOf(n);
+		this.order_shift_n_elem(n_index);
+	}
+
+	/** Step back to the previous tree. */
 	private step_back(): SpaceOctree<T>|null {
 		let parent: SpaceOctree<T>;
 
-		while ((parent = this.cursor.tree.parent) != null) {
+		if ((parent = this.cursor.tree.parent) != null) {
 			const cur_tree_index = index_within_parent(this.cursor.tree);
-			this.set_cursor_tree(parent);
-			this.order_shift_n_elem(cur_tree_index + 1);
-			if (this.cursor.cross_logic.order.length > 0)
-				return parent;
+			this.set_cursor_pos(parent, cur_tree_index, { exclude_node: true });
+			return parent;
 		}
 	}
 
 	/* Step inside a subtree. */
 	private step_in(subtree: SpaceOctree<T>) {
-		this.set_cursor_tree(subtree);
+		this.set_cursor_pos(subtree, undefined);
 	}
 }

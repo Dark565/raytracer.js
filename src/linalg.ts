@@ -36,16 +36,9 @@ export class Vector {
 		this.size = this.v.length;
 	}
 
-	[Symbol.iterator]() {
-		let i = 0;
-		return {
-			next: () => {
-				if (i < this.size)
-					return { value: this.v[i++], done: false };
-				else
-					return { done: true };
-			}
-		};
+	*[Symbol.iterator]() {
+		for (let i = 0; i < this.size; i++)
+			yield this.v[i];
 	}
 
 	get x(): number {
@@ -69,13 +62,13 @@ export class Vector {
 		return new Vector(this);
 	}
 
-	_check_compatibility(v2: Vector) {
+	private check_compatibility(v2: Vector) {
 		if (this.size != v2.size)
 			throw new VectorError("this and v2 must have the same size");
 	}
 
 	dot(v2: Vector) {
-		this._check_compatibility(v2);
+		this.check_compatibility(v2);
 
 		let sum = 0;
 		for (let i=0; i < this.size; i++) {
@@ -85,8 +78,8 @@ export class Vector {
 	}
 
 	cross(v2: Vector) {
-		if (this.size != 3 || v2.size != 3)
-			throw new VectorError("cross product is defined only for 3-dimensional vectors");
+		this.assert_size(3);
+		v2.assert_size(3);
 
 		let res = new Vector;
 		res.v[0] = this.v[1]*v2.v[2] - this.v[2]*v2.v[1];
@@ -96,7 +89,7 @@ export class Vector {
 	}
 
 	add(v2: Vector) {
-		this._check_compatibility(v2);
+		this.check_compatibility(v2);
 		let res = this.clone();
 		for (let i=0; i < this.size; i++) {
 			res.v[i] += v2.v[i];
@@ -105,7 +98,7 @@ export class Vector {
 	}
 
 	sub(v2: Vector) {
-		this._check_compatibility(v2);
+		this.check_compatibility(v2);
 		let res = this.clone();
 		for (let i=0; i < this.size; i++) {
 			res.v[i] -= v2.v[i];
@@ -134,20 +127,26 @@ export class Vector {
 		return res;
 	}
 
+	assert_size(n: number) {
+		if (this.size != n)
+			throw new VectorError(`Size assertion (this.size == ${n}) failed`);
+	}
+
 	/** Return a copy of the vector extended to n dimensions.
 	 * New fields are filled with zeros.
 	 */
 	extend(n: number): Vector {
 		if (n < this.size)
-			throw Error("Requested less dimensions that the vector currently operates on");
+			throw new VectorError("Requested less dimensions that the vector currently operates on");
 
 		return vector(...this.v, ...Array(n - this.size));
 	}
 
-	/** Rotate the 2d vector along the xy plane. */
+	/** Rotate the 2d vector along the xy plane.
+	 * @param{number} angle Rotation angle in radians.
+	 */
 	rotate_2d(angle: number): Vector {
-		if (this.size != 2)
-			throw Error("Vector must be 2 dimensional.")
+		this.assert_size(2);
 
 		let base_y = vector(-this.y, this.x);
 
@@ -156,12 +155,14 @@ export class Vector {
 	}
 
 	/** Rotate the 3d vector around the normal vector.
-	 * There is no verification for right angle thus
-	 * the transformation will be uneven if the angle isn't right.
+	 * There is no verification for the right angle thus
+	 * the transformation will be uneven if vectors aren't perpendicular.
+	 * @param{Vector} normal Vector perpendicular to this vector.
+	 * @param{number} angle  Rotation angle in radians.
 	 */
 	rotate_normal(normal: Vector, angle: number): Vector {
-		if (this.size != 3 && normal.size != 3)
-			throw Error("Vectors must be 3 dimensional");
+		this.assert_size(3);
+		normal.assert_size(3);
 
 		let base_y = this.cross(normal);
 		base_y = base_y.scale(Math.sqrt(this.length_sq()/base_y.length_sq()));
@@ -183,11 +184,18 @@ export interface Line {
 	dir: Vector;
 }
 
-export interface Solid {
-	line_cross_point(line: Line): Vector[];
+export interface IntersectionFlags {
+	/** This flag instructs an intersection function to be less strict on getting rid of infinity.
+	 * For example, with this flag, line_intersection() function on Plane returns a point with
+	 * Infinity or -Infinity for its fields if a line is parallel to a plane. */
+	allow_infinity?: boolean
 }
 
-export class Plane implements Solid {
+export interface Entity {
+	line_intersection(line: Line, flags: IntersectionFlags): Vector[];
+}
+
+export class Plane implements Entity {
 	normal: Vector;
 	pos: Vector;
 	constructor(normal: Vector, pos: Vector) {
@@ -195,9 +203,9 @@ export class Plane implements Solid {
 		this.pos = pos;
 	}
 
-	line_cross_point(line: Line): Vector[] {
+	line_intersection(line: Line, flags: IntersectionFlags = {}): Vector[] {
 		let denom = line.dir.dot(this.normal);
-		if (denom == 0)
+		if (denom == 0 && !flags.allow_infinity)
 			return [];
 
 		let off_dist = this.pos.sub(line.start);
@@ -206,7 +214,7 @@ export class Plane implements Solid {
 	}
 }
 
-export class Sphere implements Solid {
+export class Sphere implements Entity {
 	radius: number;
 	pos: Vector;
 	constructor(pos: Vector, radius: number) {
@@ -214,7 +222,7 @@ export class Sphere implements Solid {
 		this.radius = radius;
 	}
 
-	line_cross_point(line: Line): Vector[] {
+	line_intersection(line: Line): Vector[] {
 		let dist = line.start.sub(this.pos);
 		let a = line.dir.dot(line.dir);
 		let b = dist.dot(line.dir);
