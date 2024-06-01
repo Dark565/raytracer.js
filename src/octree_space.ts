@@ -16,8 +16,6 @@
 
 /** @file The algorithms for operating on octrees in space */
 
-/* FIXME: Initialize this.cursor.tree to a node at a specified position before normal walking */
-
 import { Octree, Octand } from '@app/octree';
 import { NODE_ORDER_MAP, NODE_ORDERS } from '@app/octree_const';
 import { vector, Vector, Point, Plane, Line, } from '@app/linalg';
@@ -37,7 +35,7 @@ export type SpaceOctree<T> = Octree<T,OctreeDim>;
 export type SpaceOctand<T> = Octand<T,OctreeDim>;
 
 export function node_at_pos<T>(octree: SpaceOctree<T>, dim: OctreeDim, pos: Point): [SpaceOctree<T>,number]|null {
-	if (!space.point_in_space(pos, {pos: dim.pos, size: vector(dim.size,dim.size,dim.size)}))
+	if (pos == undefined || !space.point_in_space(pos, {pos: dim.pos, size: vector(dim.size,dim.size,dim.size)}))
 		return null;
 
 	let cur_node = octree;
@@ -87,9 +85,9 @@ export function index_within_parent<T>(child: SpaceOctree<T>): number {
 
 /** OctreeWalker cursor state */
 interface OctreeWalkerCursor<T> {
-	/** The current tree on the cursor's position */
+	/** The current tree at the cursor's position */
 	tree?: SpaceOctree<T>;
-	/** The current node on the cursor's position */
+	/** The current node at the cursor's position */
 	node?: number;
 	/** The start point of the ray */
 	start_point?: Point;
@@ -118,8 +116,7 @@ export class OctreeWalker<T> {
 	}
 
 	set start_point(point: Point) {
-		this.deprecate_cursor_logic();
-		this.cursor.node = undefined;
+		this.go_to_point(point);
 		this.cursor.start_point = point;
 	}
 
@@ -174,16 +171,41 @@ export class OctreeWalker<T> {
 			yield next_node;
 	}
 
+	/** Sets the current walker position to the subtree and node covering the specified point.
+	 *  If the point is out of the tree, the posision is set to the outermost tree and undefined node. */
+	go_to_point(point: Point): boolean {
+		let pos_node: [SpaceOctree<T>, number] = undefined;
+		/* Try the tree at the cursor first to optimize traversal out */
+		for (let tree of [this.cursor.tree, this.tree]) {
+			if (tree != undefined) {
+				pos_node = node_at_pos(tree, tree.id, point);
+				if (pos_node != undefined)
+					break;
+			}
+		}
+
+		this.deprecate_cursor_logic();
+		if (pos_node == undefined) {
+			this.cursor.tree = this.tree;
+			this.cursor.node = undefined;
+			return false;
+		}
+
+		this.cursor.tree = pos_node[0];
+		this.cursor.node = pos_node[1];
+		return true;
+	}
+
 	private validate_cursor_state() {
 		if (this.cursor.tree != undefined && this.cursor.cross_logic != undefined)
 			return;
 
-		this.modify_cursor_state(this.cursor.tree || this.tree, this.cursor.node);
+		this.modify_cursor_logic(this.cursor.tree || this.tree, this.cursor.node);
 	}
 
-	/** Set the cursor position to the specified tree and node and refresh the order.
+	/** Set the cursor position to the specified tree and node and refresh the cursor logic (logic_vec and order).
 	 *  The order will start at a node `node` or after that node if `flags.exclude_node` is true. */
-	private modify_cursor_state(tree: SpaceOctree<T>, node: number, flags: { exclude_node?: boolean } = {} ) {
+	private modify_cursor_logic(tree: SpaceOctree<T>, node: number, flags: { exclude_node?: boolean } = {} ) {
 		this.cursor.tree = tree;
 		this.cursor.node = node;
 		this.cursor.cross_logic = undefined;
@@ -295,13 +317,13 @@ export class OctreeWalker<T> {
 
 		if ((parent = this.cursor.tree.parent) != null) {
 			const cur_tree_index = index_within_parent(this.cursor.tree);
-			this.modify_cursor_state(parent, cur_tree_index, { exclude_node: true });
+			this.modify_cursor_logic(parent, cur_tree_index, { exclude_node: true });
 			return parent;
 		}
 	}
 
 	/* Step inside a subtree. */
 	private step_in(subtree: SpaceOctree<T>) {
-		this.modify_cursor_state(subtree, undefined);
+		this.modify_cursor_logic(subtree, undefined);
 	}
 }
