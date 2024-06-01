@@ -16,6 +16,8 @@
 
 /** @file The algorithms for operating on octrees in space */
 
+/* FIXME: Initialize this.cursor.tree to a node at a specified position before normal walking */
+
 import { Octree, Octand } from '@app/octree';
 import { NODE_ORDER_MAP, NODE_ORDERS } from '@app/octree_const';
 import { vector, Vector, Point, Plane, Line, } from '@app/linalg';
@@ -116,6 +118,8 @@ export class OctreeWalker<T> {
 	}
 
 	set start_point(point: Point) {
+		this.deprecate_cursor_logic();
+		this.cursor.node = undefined;
 		this.cursor.start_point = point;
 	}
 
@@ -123,6 +127,7 @@ export class OctreeWalker<T> {
 	private static order_prepare_reverse(ord: number[]): number[] { return ord.reverse(); }
 
 	set direction(dir: Vector) {
+		this.deprecate_cursor_logic();
 		this.cursor.direction = dir;
 		if (dir != undefined) {
 			const dir_prepare_fns = [OctreeWalker.order_prepare_default, OctreeWalker.order_prepare_reverse];
@@ -169,9 +174,16 @@ export class OctreeWalker<T> {
 			yield next_node;
 	}
 
-	/** Set the cursor position to the specified tree and node and set up the order.
-	 *  The order will start at a node `node` or after that node if flags.exclude_node is true. */
-	private set_cursor_pos(tree: SpaceOctree<T>, node: number, flags: { exclude_node?: boolean } = {} ) {
+	private validate_cursor_state() {
+		if (this.cursor.tree != undefined && this.cursor.cross_logic != undefined)
+			return;
+
+		this.modify_cursor_state(this.cursor.tree || this.tree, this.cursor.node);
+	}
+
+	/** Set the cursor position to the specified tree and node and refresh the order.
+	 *  The order will start at a node `node` or after that node if `flags.exclude_node` is true. */
+	private modify_cursor_state(tree: SpaceOctree<T>, node: number, flags: { exclude_node?: boolean } = {} ) {
 		this.cursor.tree = tree;
 		this.cursor.node = node;
 		this.cursor.cross_logic = undefined;
@@ -182,6 +194,10 @@ export class OctreeWalker<T> {
 		}
 	}
 
+	private deprecate_cursor_logic() {
+		this.cursor.cross_logic = undefined;
+	}
+
 	private prepare_to_walk() {
 		if (this.cursor.start_point == undefined)
 			throw Error("start_point undefined; please set start_point");
@@ -189,14 +205,7 @@ export class OctreeWalker<T> {
 		if (this.cursor.direction == undefined)
 			throw Error("direction undefined; please set direction");
 
-		this.validate_cursor_pos();
-	}
-
-	private validate_cursor_pos() {
-		if (this.cursor.tree != undefined)
-			return;
-
-		this.set_cursor_pos(this.tree, undefined);
+		this.validate_cursor_state();
 	}
 
 	private setup_order() {
@@ -286,13 +295,13 @@ export class OctreeWalker<T> {
 
 		if ((parent = this.cursor.tree.parent) != null) {
 			const cur_tree_index = index_within_parent(this.cursor.tree);
-			this.set_cursor_pos(parent, cur_tree_index, { exclude_node: true });
+			this.modify_cursor_state(parent, cur_tree_index, { exclude_node: true });
 			return parent;
 		}
 	}
 
 	/* Step inside a subtree. */
 	private step_in(subtree: SpaceOctree<T>) {
-		this.set_cursor_pos(subtree, undefined);
+		this.modify_cursor_state(subtree, undefined);
 	}
 }
