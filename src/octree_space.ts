@@ -16,7 +16,7 @@
 
 /** @file The algorithms for operating on octrees in space */
 
-import { Octree, Octand } from '@app/octree';
+import { Octree, Octant } from '@app/octree';
 import { NODE_ORDER_MAP, NODE_ORDERS } from '@app/octree_const';
 import { vector, Vector, Point, Plane, Line, } from '@app/linalg';
 import * as space from '@app/space';
@@ -32,7 +32,7 @@ export interface OctreeDim {
 }
 
 export type SpaceOctree<T> = Octree<T,OctreeDim>;
-export type SpaceOctand<T> = Octand<T,OctreeDim>;
+export type SpaceOctant<T> = Octant<T,OctreeDim>;
 
 export function node_at_pos<T>(octree: SpaceOctree<T>, dim: OctreeDim, pos: Point): [SpaceOctree<T>,number]|null {
 	if (pos == undefined || !space.point_in_space(pos, {pos: dim.pos, size: vector(dim.size,dim.size,dim.size)}))
@@ -41,7 +41,7 @@ export function node_at_pos<T>(octree: SpaceOctree<T>, dim: OctreeDim, pos: Poin
 	let cur_node = octree;
 	let cur_index = 0;
 	let next_dim: OctreeDim = { pos: new Vector(dim.pos), size: dim.size };
-	let next_node: SpaceOctand<T> = cur_node;
+	let next_node: SpaceOctant<T> = cur_node;
 
 	while (next_node instanceof Octree) {
 		let rel_pos = pos.sub(next_dim.pos);
@@ -172,7 +172,8 @@ export class OctreeWalker<T> {
 	}
 
 	/** Sets the current walker position to the subtree and node covering the specified point.
-	 *  If the point is out of the tree, the posision is set to the outermost tree and undefined node. */
+	 *  If the point is out of the tree, the posision is set to the outermost tree and undefined node.
+	 *  This function automatically deprecates the cursor logic. */
 	go_to_point(point: Point): boolean {
 		let pos_node: [SpaceOctree<T>, number] = undefined;
 		/* Try the tree at the cursor first to optimize traversal out */
