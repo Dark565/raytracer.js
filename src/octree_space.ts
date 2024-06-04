@@ -120,8 +120,8 @@ export class OctreeWalker<T> {
 		this.cursor.start_point = point;
 	}
 
-	private static order_prepare_default(ord: number[]): number[] { return ord; }
-	private static order_prepare_reverse(ord: number[]): number[] { return ord.reverse(); }
+	private static order_prepare_default(ord: number[]): number[] { console.log("setting default order"); return ord; }
+	private static order_prepare_reverse(ord: number[]): number[] { console.log("setting reverse order"); return ord.reverse(); }
 
 	set direction(dir: Vector) {
 		this.deprecate_cursor_logic();
@@ -231,6 +231,7 @@ export class OctreeWalker<T> {
 		this.validate_cursor_state();
 	}
 
+	/* FIXME: Kinda working, but still have to implement a proper handling of the middle cross situation */
 	private setup_order() {
 		console.assert(this.cursor.tree != undefined);
 		console.assert(this.cursor.start_point != undefined);
@@ -242,15 +243,25 @@ export class OctreeWalker<T> {
 		const line: Line = { start: this.cursor.start_point, dir: this.cursor.direction };
 
 		let logic_vec = 0;
+
 		[[1,2],[0,2],[0,1]].forEach((x,i) => {
 			const axis_bit = 1<<i;
 			const plane = new Plane(vector(axis_bit&1, axis_bit&2, axis_bit&4), mid_point);
 			const cross_point = plane.line_intersection(line, { allow_infinity: true });
-			console.log(cross_point[0].v);
+			//console.log(`line.dir.norm(): ${line.dir.normalize().v}`);
+			//console.log(`cross_point: ${cross_point[0].v}`);
+			//console.log(`mid_point: ${mid_point.v}`);
 			const a1_ae_middle = (cross_point[0].v[x[0]] >= mid_point.v[x[0]]);
 			const a2_ae_middle = (cross_point[0].v[x[1]] >= mid_point.v[x[1]]);
-			const a1_of = (Math.abs(cross_point[0].v[x[0]] - mid_point.v[x[0]]) >= half_size);
-			const a2_of = (Math.abs(cross_point[0].v[x[1]] - mid_point.v[x[1]]) >= half_size);
+			const a1_of = (Math.abs(cross_point[0].v[x[0]] - mid_point.v[x[0]]) > half_size);
+			const a2_of = (Math.abs(cross_point[0].v[x[1]] - mid_point.v[x[1]]) > half_size);
+
+			//console.log(`(Math.abs(cross_point[0].v[x[0]] - mid_point.v[x[0]])): ${(Math.abs(cross_point[0].v[x[0]] - mid_point.v[x[0]]))}`);
+			//console.log(`(Math.abs(cross_point[0].v[x[1]] - mid_point.v[x[1]])): ${(Math.abs(cross_point[0].v[x[1]] - mid_point.v[x[1]]))}`);
+			//console.log(`half_size: ${half_size}`);
+			//console.log(`cross_point[0].v[x[0]]: ${cross_point[0].v[x[0]]}`);
+			//console.log(`cross_point[0].v[x[1]]: ${cross_point[0].v[x[1]]}`);
+
 			logic_vec |= (Number(a1_ae_middle) | (Number(a2_ae_middle) << 1)) << (i << 1);
 			logic_vec |= Number(a1_of || a2_of) << (6 + i);
 			console.log((Number(a1_ae_middle) | Number(a2_ae_middle)<<1).toString(2).padStart(2,'0'));
