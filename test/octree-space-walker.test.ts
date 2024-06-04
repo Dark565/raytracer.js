@@ -20,6 +20,8 @@ test('OctreeWalker sanity', () => {
 	walker_one_level_test(tree_walker, linalg.point(1,1,0), linalg.vector(-3/4, -Math.sqrt(3)/4, 0), [3,2,0]);
 	walker_one_level_test(tree_walker, linalg.point(0,0,0), linalg.vector(1,0.8,4), [0,4,5]);
 	walker_one_level_test(tree_walker, linalg.point(0,0,0), linalg.vector(5,3,2), [0,1,3]);
+	walker_one_level_test(tree_walker, linalg.point(0,0,0), linalg.vector(1,1,1), [3,5,7,6]);
+	walker_one_level_test(tree_walker, linalg.point(1,1,1), linalg.vector(-1,-1,-1), [6,7,5,3]);
 
 	//let time_start = performance.now();
 	//for (let sub of tree_walker.each_cross({include_undefined: true})) {

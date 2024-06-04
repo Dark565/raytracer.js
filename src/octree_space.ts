@@ -99,7 +99,7 @@ interface OctreeWalkerCursor<T> {
 	cross_logic?: { logic: number, order: number[] };
 }
 
-/** OctreeWalker traces a ray casted through the Octree */
+/** A linear memory and logarithmic time complexity algorithm for Octree ray-casting */
 export class OctreeWalker<T> {
 	private tree: SpaceOctree<T>;
 	private cursor: OctreeWalkerCursor<T>;
@@ -128,7 +128,7 @@ export class OctreeWalker<T> {
 		this.cursor.direction = dir;
 		if (dir != undefined) {
 			const dir_prepare_fns = [OctreeWalker.order_prepare_default, OctreeWalker.order_prepare_reverse];
-			this.cursor.order_prepare_fn = dir_prepare_fns[Number(dir.z >= 0) ^ Number(dir.y >= 0)];
+			this.cursor.order_prepare_fn = dir_prepare_fns[Number(dir.z < 0) | Number(dir.y < 0)];
 		}
 	}
 
@@ -248,7 +248,7 @@ export class OctreeWalker<T> {
 			const axis_bit = 1<<i;
 			const plane = new Plane(vector(axis_bit&1, axis_bit&2, axis_bit&4), mid_point);
 			const cross_point = plane.line_intersection(line, { allow_infinity: true });
-			//console.log(`line.dir.norm(): ${line.dir.normalize().v}`);
+			console.log(`line.dir.norm(): ${line.dir.normalize().v}`);
 			//console.log(`cross_point: ${cross_point[0].v}`);
 			//console.log(`mid_point: ${mid_point.v}`);
 			const a1_ae_middle = (cross_point[0].v[x[0]] >= mid_point.v[x[0]]);
