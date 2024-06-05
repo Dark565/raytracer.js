@@ -88,6 +88,13 @@ export class Vector {
 		return res;
 	}
 
+	hadamard(v2: Vector) {
+		this.check_compatibility(v2);
+		let res = new Vector;
+		for (let i=0; i < this.size; i++)
+			res.v[i] = this.v[i] * v2.v[i];
+	}
+
 	add(v2: Vector) {
 		this.check_compatibility(v2);
 		let res = this.clone();
