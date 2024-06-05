@@ -44,6 +44,11 @@ export function scale_color(color: Color, coef: number, flags: { clamp?: boolean
 	return color(...channel_values);
 }
 
+/** Calculate the hadamard product of two colors (result alpha = c1.a). */
+export function mul_color(c1: Color, c2: Color): Color {
+	return { r: c1.r * c2.r, g: c1.g * c2.g, b: c1.b * c2.b, a: c1.a };
+}
+
 /** Blends overlay color on top of base color with respect to the alpha value. */
 export function overlay_color(base: Color, overlay: Color): Color {
 	const coef_base = 1 - overlay.a;
