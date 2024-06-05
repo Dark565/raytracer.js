@@ -9,5 +9,5 @@
 			"@app/*": ["./src/*"]
 		}
 	},
-	"include": ["src/*", "example/*", "test/*"]
+	"include": ["src/*", "src/*/*", "example/*", "test/*"]
 }
