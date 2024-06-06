@@ -14,10 +14,25 @@
  * limitations under the License.
  */
 
-import { Vector, Point } from '@app/linalg';
-import { OctreeWalker } from '@app/octree_space';
+import { Vector, Point } from '@app/math/linalg';
+import { SpaceOctree, OctreeWalker } from '@app/octree_space';
 import { EntityArray } from '@app/context';
 import { Color, clone_color } from '@app/physics/color';
+
+export interface RaytracerConfig {
+	/** Global maximum count of collisions for all rays */
+	refmax: number;
+};
+
+/** Main raytracer class */
+export class Raytracer {
+
+
+	private camera_config: CameraConfig;
+	private rt_config: RaytracerConfig;
+	private otree: SpaceOctree<EntityArray>;
+
+}
 
 export class Ray {
 	/** Current count of reflections */
@@ -55,5 +70,4 @@ export class Ray {
 	get_color() {
 		return this.color;
 	}
-
 }

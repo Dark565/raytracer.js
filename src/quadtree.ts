@@ -1,4 +1,4 @@
-import {point, vector, Point, Line, Plane} from '@app/linalg';
+import {point, vector, Point, Line, Plane} from '@app/math/linalg';
 import {point_in_space} from '@app/space';
 
 export type Quadrant<T> = Quadtree<T>|T|undefined;

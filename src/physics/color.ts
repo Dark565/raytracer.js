@@ -25,23 +25,25 @@ export interface Color {
 	a: number;
 }
 
+export type ColorTuple = [number,number,number,number];
+
 export function color(r: number, g: number, b: number, a = 1.0): Color {
 	return { r: r, g: g, b: b, a: a };
 }
 
-export function clone_color(color: Color): Color {
-	return color(color.r,color.g,color.b,color.a);
+export function clone_color(c: Color): Color {
+	return color(c.r,c.g,c.b,c.a);
 }
 
-export function scale_color(color: Color, coef: number, flags: { clamp?: boolean } = {}) {
+export function scale_color(c: Color, coef: number, flags: { clamp?: boolean } = {}): Color {
 	let channels = ['r','g','b'];
 	const map_fn = flags.clamp 
-		? (ch:string) => clamp(coef * color[ch], 0, 1) 
-		: (ch:string) => coef * color[ch];
+		? (ch:string) => clamp(coef * c[ch], 0, 1) 
+		: (ch:string) => coef * c[ch];
 
 	const channel_values = channels.map(map_fn);
-	channel_values[3] = color.a;
-	return color(...channel_values);
+	channel_values[3] = c.a;
+	return color(...channel_values as ColorTuple);
 }
 
 /** Calculate the hadamard product of two colors (result alpha = c1.a). */
@@ -55,7 +57,7 @@ export function overlay_color(base: Color, overlay: Color): Color {
 	let color_channels = ['r','g','b'].map((ch) => clamp(coef_base * base[ch] + overlay.a * overlay[ch], 0.0, 1.0));
 
 	color_channels[3] = clamp(base.a + overlay.a, 0.0, 1.0);
-	return color(...(color_channels as [number,number,number,number]));
+	return color(...color_channels as ColorTuple);
 }
 
 

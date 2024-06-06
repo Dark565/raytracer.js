@@ -18,7 +18,7 @@
 
 import { Octree, Octant } from '@app/octree';
 import { NODE_ORDER_MAP, NODE_ORDERS } from '@app/octree_const';
-import { vector, Vector, Point, Plane, Line, } from '@app/linalg';
+import { vector, Vector, Point, Plane, Line, } from '@app/math/linalg';
 import * as space from '@app/space';
 
 /** The geometric dimensions of the octree.

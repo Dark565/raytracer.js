@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Point } from '@app/linalg';
+import { Point } from '@app/math/linalg';
 import { Ray } from '@app/raytracer';
 
 export enum ResponseType {
@@ -34,11 +34,11 @@ export abstract class Material {
 	abstract alter_ray(ray: Ray, point: Point): boolean;
 }
 
-/** A material type whose light response is determined onle by its static parameters */
+/** A material type whose light response is determined only by its static parameters */
 export abstract class StaticMaterial extends Material {
 	/** The ratio of the reflected/transmitted light intensity to the received light intensity.
 	 * This parameter is a coefficient when calculating a new color. */
-	reflectivity: number;
+	//reflectance: number;
 
 	/** The response type for a material. */
 	response: ResponseType;
@@ -46,9 +46,8 @@ export abstract class StaticMaterial extends Material {
 	/** The result of is_mirror(). */
 	mirror: boolean;
 
-	protected constructor(reflectivity: number, mirror: boolean, response: ResponseType) {
+	protected constructor(mirror: boolean, response: ResponseType) {
 		super();
-		this.reflectivity = reflectivity;
 		this.mirror = mirror;
 		this.response = response;
 	}

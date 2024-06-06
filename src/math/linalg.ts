@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { Complex } from '@app/math/complex';
+
 export class VectorError extends Error {}
 
 /**
@@ -142,9 +144,14 @@ export class Vector {
 	/** Return a copy of the vector extended to n dimensions.
 	 * New fields are filled with zeros.
 	 */
-	extend(n: number): Vector {
+	extend(n: number, fields?: number[]): Vector {
 		if (n < this.size)
 			throw new VectorError("Requested less dimensions that the vector currently operates on");
+
+		const new_fields = fields ?? Array(n - this.size).fill(0);
+
+		if (new_fields.length < (n - this.size))
+			throw new VectorError("Not enough elements passed");
 
 		return vector(...this.v, ...Array(n - this.size));
 	}
@@ -177,6 +184,11 @@ export class Vector {
 		let [sin, cos] = [Math.sin(angle), Math.cos(angle)];
 		return this.scale(cos).add(base_y.scale(sin))
 	}
+
+	to_complex(): Complex {
+		this.assert_size(2);
+		return new Complex(this.x, this.y);
+	}
 }
 
 export function vector(...numbers: number[]): Vector {
@@ -189,6 +201,18 @@ export var point = vector;
 export interface Line {
 	start: Point;
 	dir: Vector;
+}
+
+/** Perform a 2D rotation of two **orthogonal** input vectors along their shared plane.
+ * @param{Vector} base_x  The first orthogonal vector.
+ * @param{Vector} base_y  The second orthogonal vector. 
+ * @param{Vector} rot_vec A **normalized** vector representing the rotation angle.
+ * @return{[Vector,Vector]} The rotated vectors */
+export function rotate_vectors(base_x: Vector, base_y: Vector, rot_vec: Vector): [Vector,Vector] {
+	return [
+		base_x.scale(rot_vec.v[0]).add(base_y.scale(rot_vec.v[1])),
+		base_x.scale(-rot_vec.v[1]).add(base_y.scale(rot_vec.v[0]))
+	];
 }
 
 export interface IntersectionFlags {

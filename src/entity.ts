@@ -16,13 +16,24 @@
 
 /** @file Definitions of data structures used for describing world entities. */
 
-import { Point } from '@app/linalg';
-import * as linalg from '@app/linalg'
-import * as physics from '@app/physics'
+import { Point, Vector } from '@app/math/linalg';
+import { Ray } from '@app/raytracer';
+import { Material } from '@app/physics/material'
 
-/** The core entity interface */
-export interface Entity extends linalg.Entity {
-	pos: Point;
+/** Information about a ray collision. */
+export interface CollisionInfo {
+	/** Point of the collision. (intersection point) */
+	point: Point;
+ /** Material of the entity. */
 	material: Material;
+	/** The (normalized) vector orthogonal to the entity surface. */
+	normal: Vector;
 }
 
+export abstract class Entity {
+	/** If a ray would collide, return CollisionInfo, otherwise null. */
+	abstract collision_info(ray: Ray): CollisionInfo|null;
+	/** Get position of an entity (typically its center point). */
+	abstract get_pos(): Point;
+	abstract set_pos(p: Point): Point;
+}

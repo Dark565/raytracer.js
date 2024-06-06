@@ -14,3 +14,18 @@
  * limitations under the License.
  */
 
+import { Entity } from '@app/entity';
+import { Point } from '@app/math/linalg';
+import { Material } from '@app/physics/material'
+
+export abstract class BasicEntity extends Entity {
+	protected pos: Point;
+	protected material: Material;
+
+	get_pos() { return this.pos; }
+	set_pos(p: Point): Point { 
+		const old_pos = this.pos;
+		this.pos = p;
+		return old_pos;
+	}
+}

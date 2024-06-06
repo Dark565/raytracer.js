@@ -14,10 +14,4 @@
  * limitations under the License.
  */
 
-import * as octops from 'octree_space';
-
-function main() {
-
-}
-
-main();
+import { BasicEntity } from '@app/entities/entity_basic';
