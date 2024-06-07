@@ -97,14 +97,14 @@ export class Camera {
 		const rot_vec = n >= 0 ? this.rot_v_v : vector(this.rot_v_v.x, -this.rot_v_v.y);
 		const steps = Math.abs(n);
 		for (let i = 0; i < steps; i++)
-			this.rotate_v_v(rot_vec);
+			this.rotate_h_v(rot_vec);
 	}
 
 	/** Rotate the camera horizontally (with conf.rot_v angle) by n steps */
 	rotate_v_step(n: number) {
 		const rot_vec = n >= 0 ? this.rot_h_v : vector(this.rot_h_v.x, -this.rot_h_v.y);
 		for (let i = 0; i < n; i++) {
-			if (!this.rotate_h_v(rot_vec))
+			if (!this.rotate_v_v(rot_vec))
 				break;
 		}
 	}
@@ -112,11 +112,14 @@ export class Camera {
 	/** Rotate the camera horizontally by the angle between positive X-axis [1,0] and a **normalized** 2D vector v.
 	 * @return true */
 	rotate_h_v(v: Vector): boolean {
-		const norm_fr_xy = vector(this.norm_fr.x, this.norm_fr.y)
-		const norm_lf_xy = vector(this.norm_lf.x, this.norm_lf.y);
-		const [norm_fr, norm_lf] = rotate_vectors(norm_fr_xy, norm_lf_xy, v);
-		this.norm_fr = norm_fr.extend(3, [this.norm_fr.z]);
-		this.norm_lf = norm_lf.extend(3, [this.norm_lf.z]);
+		let norm_fr_xy = vector(this.norm_fr.x, this.norm_fr.y)
+		let norm_fr_ortho_xy = vector(-this.norm_fr.y, this.norm_fr.x);
+		let norm_lf_xy = vector(this.norm_lf.x, this.norm_lf.y);
+		let norm_lf_ortho_xy = vector(-this.norm_lf.y, this.norm_lf.x);
+		[norm_fr_xy] = rotate_vectors(norm_fr_xy, norm_fr_ortho_xy, v);
+		[norm_lf_xy] = rotate_vectors(norm_lf_xy, norm_lf_ortho_xy, v);
+		this.norm_fr = norm_fr_xy.extend(3, [this.norm_fr.z]);
+		this.norm_lf = norm_lf_xy.extend(3, [this.norm_lf.z]);
 		this.norm_up = this.norm_fr.cross(this.norm_lf);
 		return true;
 	}
@@ -132,13 +135,22 @@ export class Camera {
 
 		this.norm_fr = norm_fr;
 		this.norm_up = norm_up;
+
 		return true;
 	}
 
-	/* TODO: Test this! */
+	reset_angles() {
+		this.norm_fr = vector(1,0,0);
+		this.norm_lf = vector(0,1,0);
+		this.norm_up = vector(0,0,1);
+	}
+
 	/** Yield the direction vector for each pixel on the screen. */
 	*get_dir_for_each_pixel(): Generator<CameraPixel> {
 		const conf = this.conf;
+		const camera = this; // to avoid a bug? in typescript transpillers that causes
+		                     // 'this' to become undefined in the context of generator lambdas.
+
 		const rot_scan_h_counter_v = vector(this.rot_scan_h_v.x, -this.rot_scan_h_v.y);
 		const rot_scan_v_counter_v = vector(this.rot_scan_v_v.x, -this.rot_scan_v_v.y);
 
@@ -146,7 +158,7 @@ export class Camera {
 														  rot_vec: Vector, beg_fr_v: Vector, loop_inc: number)
 		{
 			let fr_v = beg_fr_v;
-			let lf_v = this.norm_lf;
+			let lf_v = camera.norm_lf;
 
 			for (let i = from_x; i != to_x; i += loop_inc) {
 				[fr_v, lf_v] = rotate_vectors(fr_v, lf_v, rot_vec);
@@ -154,19 +166,20 @@ export class Camera {
 			}
 		}
 
-		const iter_v = function* (from_y: number, to_y: number, rot_vec: Vector, loop_inc: number)
+		const iter_v = function* (from_y: number, to_y: number,
+															rot_vec: Vector, loop_inc: number)
 		{
-			let fr_v = this.norm_fr;
-			let up_v = this.norm_up;
+			let fr_v = camera.norm_fr;
+			let up_v = camera.norm_up;
 
 			for (let i = from_y; i != to_y; i += loop_inc) {
 				[fr_v, up_v] = rotate_vectors(fr_v, up_v, rot_vec);
-				yield* iter_h((conf.screen_h>>1) + 1, conf.screen_h, i, this.rot_scan_h_v, fr_v, 1);
+				yield* iter_h((conf.screen_h>>1) + 1, conf.screen_h, i, camera.rot_scan_h_v, fr_v, 1);
 				yield* iter_h(conf.screen_h>>1, 0, i, rot_scan_h_counter_v, fr_v, -1);
 			}
 		}
 
-		yield* iter_v((conf.screen_w>>1) + 1, conf.screen_w, this.rot_scan_v_v, 1);
-		yield* iter_v(conf.screen_w>>1 + 1, 0, rot_scan_v_counter_v, -1);
+		yield* iter_v((conf.screen_w>>1) + 1, conf.screen_w, camera.rot_scan_v_v, 1);
+		yield* iter_v(conf.screen_w>>1, 0, rot_scan_v_counter_v, -1);
 	}
 }
