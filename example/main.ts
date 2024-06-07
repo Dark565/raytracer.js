@@ -1,6 +1,6 @@
 import * as drawer from "@app/drawer";
 import * as qt from "@app/quadtree";
-import { point, Line, vector } from "@app/linalg";
+import { point, Line, vector } from "@app/math/linalg";
 
 var tree_list: qt.Quadtree<any[]>[] = [];
 

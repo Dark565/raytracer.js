@@ -149,6 +149,11 @@ export class Camera {
 		return this.norm_fr.clone();
 	}
 
+	/** Limit or unlimit the camera's vertical rotation */
+	set_vertical_lock(on: boolean) {
+		this.conf.flags.vertical_locked = on;
+	}
+
 	/** Yield the direction vector for each pixel on the screen. */
 	*get_dir_for_each_pixel(): Generator<CameraPixel> {
 		const conf = this.conf;

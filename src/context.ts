@@ -16,17 +16,25 @@
 
 /** @file The rendering context of the raytracer */
 
-import { SpaceOctree, OctreeWalker } from '@app/octree_space';
+import { Octree } from '@app/octree';
+import { SpaceOctree, OctreeWalker, OctreeDim } from '@app/octree_space';
 import { Entity } from '@app/entity';
-
 
 /** EntityArray is an array storing indexes of entities */
 export class EntityArray {
 	private array: Array<Entity>;
+	elem() {
+		return this.array;
+	}
 }
 
-/** RenderContext provides the context for rendering like
- * information about shapes and objects around the world */
-export class RenderContext {
-	private otree: SpaceOctree<EntityArray>;
+export type EntityOtree       = SpaceOctree<EntityArray>;
+export type EntityOtreeWalker = OctreeWalker<EntityArray>;
+
+export function new_entity_octree(dim: OctreeDim): EntityOtree {
+	return new Octree<EntityArray, OctreeDim>(dim);
+}
+
+export function new_entity_octree_walker(tree: EntityOtree): EntityOtreeWalker {
+	return new OctreeWalker(tree);
 }

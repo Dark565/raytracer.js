@@ -195,6 +195,28 @@ export class Vector {
 		this.assert_size(2);
 		return new Complex(this.x, this.y);
 	}
+
+	/** Compare two vectors */
+	equal(v2: Vector) {
+		this.check_compatibility(v2);
+		for (let i = 0; i < this.size; i++) {
+			if (this.v[i] != v2.v[i])
+				return false;
+		}
+
+		return true;
+	}
+
+	/** Compare two vectors with space for error */
+	near_equal(v2: Vector, max_diff: number) {
+		this.check_compatibility(v2);
+		for (let i = 0; i < this.size; i++) {
+			if (this.v[i] - v2.v[i] > max_diff)
+				return false;
+		}
+
+		return true;
+	}
 }
 
 export function vector(...numbers: number[]): Vector {

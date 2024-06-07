@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-export interface RGBPixel {
-	[0]: number;
-	[1]: number;
-	[2]: number;
-}
+/** Color of a pixel. Individual channel are in <0.0, 1.0> range */
+export type RGBPixel = [number,number,number];
 
 export interface ScreenFlags {
 	buffer_pixels?: boolean

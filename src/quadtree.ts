@@ -109,8 +109,8 @@ export function* each_cross<T>(tree: Quadtree<T>, line: Line, flags: { respect_s
 		let mid_point = point(subtree.dim.pos.x+half_size, subtree.dim.pos.y+half_size);
 		let axis_y = new Plane(vector(1,0), mid_point); // y axis
 		let axis_x = new Plane(vector(0,1), mid_point); // x axis
-		let cross_y = axis_y.line_cross_point(line);
-		let cross_x = axis_x.line_cross_point(line);
+		let cross_y = axis_y.line_intersection(line);
+		let cross_x = axis_x.line_intersection(line);
 		let y_mid_dist = cross_y[0].sub(mid_point);
 		let x_mid_dist = cross_x[0].sub(mid_point);
 

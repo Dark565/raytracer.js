@@ -16,9 +16,7 @@
 
 import { Vector, Point } from '@app/math/linalg';
 import { clamp } from '@app/math/mathutils';
-import { Octree } from '@app/octree';
-import { SpaceOctree, OctreeWalker } from '@app/octree_space';
-import { EntityArray } from '@app/context';
+import { EntityArray, new_entity_octree_walker, EntityOtree, EntityOtreeWalker } from '@app/context';
 import { Entity, CollisionInfo } from '@app/entity';
 import { Color, color, clone_color, mul_color } from '@app/physics/color';
 import * as material from '@app/physics/material';
@@ -29,9 +27,6 @@ export interface RaytracerConfig {
 	/** Global maximum count of collisions for all rays */
 	refmax: number;
 };
-
-type RtTree = SpaceOctree<EntityArray>;
-type RtTreeWalker = OctreeWalker<EntityArray>;
 
 const COLOR_SKY_BLACK = color(1e-1, 1e-1, 1e-1);
 const COLOR_WHITE     = color(1,1,1);
@@ -49,10 +44,10 @@ export class Ray {
 	/** Current color of the ray; can be altered by materials */
 	private color: Color;
 	/** The OctreeWalker assigned to the ray */
-	private walker: RtTreeWalker;
+	private walker: EntityOtreeWalker;
 
 	constructor(refmax: number, start_point: Point, dir: Vector,
-							color: Color, walker: RtTreeWalker,
+							color: Color, walker: EntityOtreeWalker,
 							flags: { keep_dir_unnormalized?: boolean } = {}) 
 	{
 		this.refcount = 0;
@@ -79,15 +74,14 @@ export class Ray {
 	trace() {
 		const walker = this.walker;
 		walker.direction = this.dir;
-		walker.go_to_point(this.refpoint);
-		let subtree: RtTree;
-		let octant: number;
-		while (([subtree, octant] = walker.next()) != undefined) {
-			const search_array = subtree.get(octant) as EntityArray;
+		walker.start_point = (this.refpoint);
+		let tree_node: [EntityOtree, number];
+		while ((tree_node = walker.next()) != undefined) {
+			const search_array = tree_node[0].get(tree_node[1]) as EntityArray;
 			let collision_info: CollisionInfo;
 			for (let entity of search_array.elem()) {
 				collision_info = entity.collision_info(this);
-				/* TODO: Probably find out better way for getting rid of the previous collision point */
+				/* TODO: Probably find out a better way for getting rid of the previous collision point */
 				if (collision_info != undefined && !collision_info.point.near_equal(this.refpoint, 1e-6))
 					break;
 			}
@@ -97,7 +91,7 @@ export class Ray {
 				// TODO: Convert the intersection point to the surface point for materials
 				collision_info.material.alter_ray(this, collision_info.point);
 				this.refpoint = collision_info.point;
-				walker.go_to_point(this.refpoint);
+				walker.start_point = this.refpoint;
 
 				const response_type = collision_info.material.response_type(collision_info.point);
 				switch (response_type) {
@@ -131,17 +125,18 @@ export class Ray {
 
 /** Main raytracer class */
 export class Raytracer {
-	private otree: RtTree;
-	private walker: RtTreeWalker;
+	private walker: EntityOtreeWalker;
 	private config: RaytracerConfig;
 	private pos: Point;
 	private camera?: Camera;
 	private screen?: Screen;
 
-	constructor(otree: RtTree, config: RaytracerConfig, camera?: Camera, screen?: Screen) {
-		this.otree = otree;
+	constructor(config: RaytracerConfig, pos: Point, otree: EntityOtree, camera?: Camera, screen?: Screen) {
 		this.camera = camera;
-		this.walker = new OctreeWalker<EntityArray>(otree);
+		this.screen = screen;
+		this.pos = pos.clone();
+		this.walker = new_entity_octree_walker(otree);
+		this.config = Object.assign({}, config);
 	}
 
 	set_camera(camera?: Camera) {

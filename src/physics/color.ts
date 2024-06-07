@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { clamp } from '@app/mathutils';
+import { clamp } from '@app/math/mathutils';
 
 /* NOTE: Should've probably been implemented as based on Vector */
 

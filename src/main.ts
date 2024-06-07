@@ -14,10 +14,43 @@
  * limitations under the License.
  */
 
-import * as octops from 'octree_space';
+import { Vector, Point, vector, point } from '@app/math/linalg';
+import { clamp } from '@app/math/mathutils';
+import { Octree } from '@app/octree';
+import { SpaceOctree, OctreeWalker } from '@app/octree_space';
+import { EntityArray, new_entity_octree } from '@app/context';
+import { Entity, CollisionInfo } from '@app/entity';
+import { Raytracer } from '@app/raytracer';
+import { Camera, CameraConfig } from '@app/view/camera';
+import { CanvasScreen } from '@app/view/screen_canvas';
+
+const CANVAS_NAME = 'rtcanvas';
+const REFMAX = 32;
 
 function main() {
+	const canvas = document.getElementById(CANVAS_NAME) as HTMLCanvasElement;
+	if (canvas == undefined)
+		throw Error("Cannot access the canvas!!");
 
+	const camera_conf: CameraConfig = {
+		fov_v: Math.PI,
+		fov_h: Math.PI,
+		screen_w: canvas.width,
+		screen_h: canvas.height,
+		rot_v: Math.PI/45,
+		rot_h: Math.PI/45,
+		flags: { vertical_locked: true }
+	};
+
+	const screen = new CanvasScreen(canvas.getContext("2d"), { buffer_pixels: false });
+	const camera = new Camera(camera_conf);
+
+	const otree = new_entity_octree({pos: point(0,0,0), size: 1});
+	const raytracer = new Raytracer({refmax: REFMAX}, point(0.5,0.5,0.5), otree, camera, screen);
+
+	//while (1) {
+		raytracer.trace_frame();
+	//}
 }
 
 main();
