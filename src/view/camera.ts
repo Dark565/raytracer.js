@@ -100,7 +100,7 @@ export class Camera {
 			this.rotate_h_v(rot_vec);
 	}
 
-	/** Rotate the camera horizontally (with conf.rot_v angle) by n steps */
+	/** Rotate the camera vertically (with conf.rot_v angle) by n steps */
 	rotate_v_step(n: number) {
 		const rot_vec = n >= 0 ? this.rot_h_v : vector(this.rot_h_v.x, -this.rot_h_v.y);
 		for (let i = 0; i < n; i++) {
@@ -113,11 +113,9 @@ export class Camera {
 	 * @return true */
 	rotate_h_v(v: Vector): boolean {
 		let norm_fr_xy = vector(this.norm_fr.x, this.norm_fr.y)
-		let norm_fr_ortho_xy = vector(-this.norm_fr.y, this.norm_fr.x);
 		let norm_lf_xy = vector(this.norm_lf.x, this.norm_lf.y);
-		let norm_lf_ortho_xy = vector(-this.norm_lf.y, this.norm_lf.x);
-		[norm_fr_xy] = rotate_vectors(norm_fr_xy, norm_fr_ortho_xy, v);
-		[norm_lf_xy] = rotate_vectors(norm_lf_xy, norm_lf_ortho_xy, v);
+		[norm_fr_xy] = rotate_vectors(norm_fr_xy, norm_fr_xy.ortho(), v);
+		[norm_lf_xy] = rotate_vectors(norm_lf_xy, norm_lf_xy.ortho(), v);
 		this.norm_fr = norm_fr_xy.extend(3, [this.norm_fr.z]);
 		this.norm_lf = norm_lf_xy.extend(3, [this.norm_lf.z]);
 		this.norm_up = this.norm_fr.cross(this.norm_lf);
@@ -139,10 +137,16 @@ export class Camera {
 		return true;
 	}
 
+	/** Reset camera angles */
 	reset_angles() {
 		this.norm_fr = vector(1,0,0);
 		this.norm_lf = vector(0,1,0);
 		this.norm_up = vector(0,0,1);
+	}
+
+	/** Get the vector normal to the camera's center pixel */
+	get_front_vector() {
+		return this.norm_fr.clone();
 	}
 
 	/** Yield the direction vector for each pixel on the screen. */
