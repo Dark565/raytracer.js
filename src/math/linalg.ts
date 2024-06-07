@@ -185,6 +185,12 @@ export class Vector {
 		return this.scale(cos).add(base_y.scale(sin))
 	}
 
+	/** Get the vector orthogonal to the 2D vector */
+	ortho() {
+		this.assert_size(2);
+		return vector(-this.y, this.x);
+	}
+
 	to_complex(): Complex {
 		this.assert_size(2);
 		return new Complex(this.x, this.y);
