@@ -153,7 +153,7 @@ export class Vector {
 		if (new_fields.length < (n - this.size))
 			throw new VectorError("Not enough elements passed");
 
-		return vector(...this.v, ...Array(n - this.size));
+		return vector(...this.v, ...new_fields);
 	}
 
 	/** Rotate the 2d vector along the xy plane.
