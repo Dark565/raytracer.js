@@ -1,4 +1,4 @@
-import * as linalg from '@app/linalg';
+import * as linalg from '@app/math/linalg';
 import * as otree from '@app/octree';
 import * as space from '@app/octree_space';
 

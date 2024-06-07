@@ -1,6 +1,6 @@
 import { Octree } from '@app/octree';
 import * as space from '@app/octree_space';
-import { point } from '@app/linalg';
+import { point } from '@app/math/linalg';
 
 test('point_at_pos() fuzzy test', ()=>{
 		const otree_dim = { pos: point(0,0,0), size: 1 };
