@@ -120,8 +120,8 @@ export class OctreeWalker<T> {
 		this.cursor.start_point = point;
 	}
 
-	private static order_prepare_default(ord: number[]): number[] { console.log("setting default order"); return ord; }
-	private static order_prepare_reverse(ord: number[]): number[] { console.log("setting reverse order"); return ord.reverse(); }
+	private static order_prepare_default(ord: number[]): number[] { /* console.log("setting default order"); */ return ord; }
+	private static order_prepare_reverse(ord: number[]): number[] { /* console.log("setting reverse order"); */ return ord.reverse(); }
 
 	set direction(dir: Vector) {
 		this.deprecate_cursor_logic();
@@ -248,7 +248,7 @@ export class OctreeWalker<T> {
 			const axis_bit = 1<<i;
 			const plane = new Plane(vector(axis_bit&1, axis_bit&2, axis_bit&4), mid_point);
 			const cross_point = plane.line_intersection(line, { allow_infinity: true });
-			console.log(`line.dir.norm(): ${line.dir.normalize().v}`);
+			/* console.log(`line.dir.norm(): ${line.dir.normalize().v}`); */
 			//console.log(`cross_point: ${cross_point[0].v}`);
 			//console.log(`mid_point: ${mid_point.v}`);
 			const a1_ae_middle = (cross_point[0].v[x[0]] >= mid_point.v[x[0]]);
@@ -264,8 +264,8 @@ export class OctreeWalker<T> {
 
 			logic_vec |= (Number(a1_ae_middle) | (Number(a2_ae_middle) << 1)) << (i << 1);
 			logic_vec |= Number(a1_of || a2_of) << (6 + i);
-			console.log((Number(a1_ae_middle) | Number(a2_ae_middle)<<1).toString(2).padStart(2,'0'));
-			console.log(logic_vec.toString(2).padStart(9, '0'));
+			/* console.log((Number(a1_ae_middle) | Number(a2_ae_middle)<<1).toString(2).padStart(2,'0')); */
+			/* console.log(logic_vec.toString(2).padStart(9, '0')); */
 		});
 
 		const order_index = Number((NODE_ORDER_MAP >> BigInt(logic_vec << 1)) & BigInt(0x3));

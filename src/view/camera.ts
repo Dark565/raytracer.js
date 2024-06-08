@@ -164,31 +164,39 @@ export class Camera {
 		const rot_scan_v_counter_v = vector(this.rot_scan_v_v.x, -this.rot_scan_v_v.y);
 
 		const iter_h = function* (from_x: number, to_x: number, y: number,
-														  rot_vec: Vector, beg_fr_v: Vector, loop_inc: number)
+														  rot_vec: Vector, beg_fr_v: Vector, loop_inc: number,
+														  rotate_first: boolean)
 		{
 			let fr_v = beg_fr_v;
 			let lf_v = camera.norm_lf;
 
-			for (let i = from_x; i != to_x; i += loop_inc) {
+			if (rotate_first)
 				[fr_v, lf_v] = rotate_vectors(fr_v, lf_v, rot_vec);
+
+			for (let i = from_x; i != to_x; i += loop_inc) {
 				yield { x: i, y: y, dir: lf_v.clone() };
+				[fr_v, lf_v] = rotate_vectors(fr_v, lf_v, rot_vec);
 			}
 		}
 
 		const iter_v = function* (from_y: number, to_y: number,
-															rot_vec: Vector, loop_inc: number)
+															rot_vec: Vector, loop_inc: number,
+															rotate_first: boolean)
 		{
 			let fr_v = camera.norm_fr;
 			let up_v = camera.norm_up;
 
-			for (let i = from_y; i != to_y; i += loop_inc) {
+			if (rotate_first)
 				[fr_v, up_v] = rotate_vectors(fr_v, up_v, rot_vec);
-				yield* iter_h((conf.screen_h>>1) + 1, conf.screen_h, i, camera.rot_scan_h_v, fr_v, 1);
-				yield* iter_h(conf.screen_h>>1, 0, i, rot_scan_h_counter_v, fr_v, -1);
+
+			for (let i = from_y; i != to_y; i += loop_inc) {
+				yield* iter_h(conf.screen_h>>1, conf.screen_h, i, camera.rot_scan_h_v, fr_v, 1, false);
+				yield* iter_h((conf.screen_h>>1)-1, -1, i, rot_scan_h_counter_v, fr_v, -1, true);
+				[fr_v, up_v] = rotate_vectors(fr_v, up_v, rot_vec);
 			}
 		}
 
-		yield* iter_v((conf.screen_w>>1) + 1, conf.screen_w, camera.rot_scan_v_v, 1);
-		yield* iter_v(conf.screen_w>>1, 0, rot_scan_v_counter_v, -1);
+		yield* iter_v(conf.screen_w>>1, conf.screen_w, camera.rot_scan_v_v, 1, false);
+		yield* iter_v((conf.screen_w>>1)-1, -1, rot_scan_v_counter_v, -1, true);
 	}
 }

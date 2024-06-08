@@ -31,7 +31,7 @@ export class CanvasScreen extends Screen {
 		this.canvas_ctx = canvas_ctx;
 		this.canvas = canvas_ctx.canvas;
 		this.flags = flags;
-		this.image = canvas_ctx.getImageData(0,0,this.canvas.width,this.canvas.height);
+		this.image = canvas_ctx.getImageData(0, 0, this.canvas.width,this.canvas.height);
 	}
 
 	set_pixel(x: number, y: number, pixel: RGBPixel) {
@@ -42,9 +42,10 @@ export class CanvasScreen extends Screen {
 
 		const col_conv = this.convert_color(pixel);
 
-		this.image[i]   = col_conv[0];
-		this.image[i+1] = col_conv[1];
-		this.image[i+2] = col_conv[2];
+		this.image.data[i]   = col_conv[0];
+		this.image.data[i+1] = col_conv[1];
+		this.image.data[i+2] = col_conv[2];
+		this.image.data[i+3] = 0xff;
 		if (!this.flags.buffer_pixels)
 			this.flush();
 	}
@@ -57,9 +58,10 @@ export class CanvasScreen extends Screen {
 		const pix_count = this.canvas.width * this.canvas.height;
 		const col_conv = this.convert_color(pixel);
 		for (let i = 0; i < (pix_count << 2); i += 4) {
-			this.image[i]   = col_conv[0];
-			this.image[i+1] = col_conv[1];
-			this.image[i+2] = col_conv[2];
+			this.image.data[i]   = col_conv[0];
+			this.image.data[i+1] = col_conv[1];
+			this.image.data[i+2] = col_conv[2];
+			this.image.data[i+3] = 0xff;
 		}
 		if (!this.flags.buffer_pixels)
 			this.flush();

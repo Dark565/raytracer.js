@@ -42,7 +42,9 @@ function main() {
 		flags: { vertical_locked: true }
 	};
 
-	const screen = new CanvasScreen(canvas.getContext("2d"), { buffer_pixels: false });
+	const canvas_ctx = canvas.getContext("2d");
+
+	const screen = new CanvasScreen(canvas_ctx, { buffer_pixels: true });
 	const camera = new Camera(camera_conf);
 
 	const otree = new_entity_octree({pos: point(0,0,0), size: 1});
