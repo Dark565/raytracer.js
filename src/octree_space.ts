@@ -36,9 +36,7 @@ export type SpaceOctreePos<T> = OctreePos<T,OctreeDim>;
 export type SpaceOctree<T> = Octree<T,OctreeDim>;
 export type SpaceOctant<T> = Octant<T,OctreeDim>;
 
-/* TODO: Substitute the [SpaceOctree<T>,number] return type of certain functions to SpaceOctreePos<T>. */
-
-export function node_at_pos<T>(octree: SpaceOctree<T>, dim: OctreeDim, pos: Point): [SpaceOctree<T>,number]|null {
+export function node_at_pos<T>(octree: SpaceOctree<T>, dim: OctreeDim, pos: Point): SpaceOctreePos<T>|null {
 	if (pos == undefined || !space.point_in_space(pos, {pos: dim.pos, size: vector(dim.size,dim.size,dim.size)}))
 		return null;
 
@@ -58,7 +56,10 @@ export function node_at_pos<T>(octree: SpaceOctree<T>, dim: OctreeDim, pos: Poin
 			next_dim.pos.v[i] += (ind_vec.v[i] <<0) * next_dim.size;
 	}
 
-	return [cur_node,cur_index];
+	return {
+		tree:   cur_node,
+		octant: cur_index
+	};
 }
 
 export function new_subtree<T>(tree: SpaceOctree<T>, n: number, flags: { allow_replace?: boolean } = {}): SpaceOctree<T> {
@@ -144,7 +145,7 @@ export class OctreeWalker<T> {
 		return this.cursor.direction;
 	}
 
-	next(flags: { include_undefined?: boolean } = {}): [SpaceOctree<T>,number]|null {
+	next(flags: { include_undefined?: boolean } = {}): SpaceOctreePos<T>|null {
 		this.prepare_to_walk();
 
 		let next_index: number;
@@ -160,7 +161,10 @@ export class OctreeWalker<T> {
 					}
 					else {
 						this.cursor.node = next_index;
-						return [this.cursor.tree,next_index];
+						return {
+							tree:   this.cursor.tree,
+							octant: next_index
+						};
 					}
 				}
 			}
@@ -170,7 +174,7 @@ export class OctreeWalker<T> {
 	}
 
 	*each_cross(flags: { include_undefined?: boolean } = {}) {
-		let next_node: [SpaceOctree<T>, number];
+		let next_node: SpaceOctreePos<T>;
 		while ((next_node = this.next(flags)) != null)
 			yield next_node;
 	}
@@ -179,7 +183,7 @@ export class OctreeWalker<T> {
 	 *  If the point is out of the tree, the posision is set to the outermost tree and undefined node.
 	 *  This function automatically deprecates the cursor logic. */
 	go_to_point(point: Point): boolean {
-		let pos_node: [SpaceOctree<T>, number] = undefined;
+		let pos_node: SpaceOctreePos<T> = undefined;
 		/* Try the tree at the cursor first to optimize traversal out */
 		for (let tree of [this.cursor.tree, this.tree]) {
 			if (tree != undefined) {
@@ -196,8 +200,8 @@ export class OctreeWalker<T> {
 			return false;
 		}
 
-		this.cursor.tree = pos_node[0];
-		this.cursor.node = pos_node[1];
+		this.cursor.tree = pos_node.tree;
+		this.cursor.node = pos_node.octant;
 		return true;
 	}
 

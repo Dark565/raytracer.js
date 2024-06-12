@@ -16,7 +16,7 @@
 
 import { Vector, Point } from '@app/math/linalg';
 import { clamp } from '@app/math/mathutils';
-import { EntityArray, new_entity_octree_walker, EntityOtree, EntityOtreeWalker } from '@app/context';
+import { EntityArray, new_entity_octree_walker, EntityOtree, EntityOtreeWalker, EntityOtreePos } from '@app/context';
 import { Entity, CollisionInfo } from '@app/entity';
 import { Color, color, clone_color, mul_color } from '@app/physics/color';
 import * as material from '@app/physics/material';
@@ -83,9 +83,9 @@ export class Ray {
 		const walker = this.walker;
 		walker.direction = this.dir;
 		walker.start_point = (this.refpoint);
-		let tree_node: [EntityOtree, number];
+		let tree_node: EntityOtreePos;
 		while ((tree_node = walker.next()) != undefined) {
-			const search_array = tree_node[0].get(tree_node[1]) as EntityArray;
+			const search_array = tree_node.tree.get(tree_node.octant) as EntityArray;
 			let collision_info: CollisionInfo;
 			for (let entity of search_array.elem()) {
 				collision_info = entity.collision_info(this);
