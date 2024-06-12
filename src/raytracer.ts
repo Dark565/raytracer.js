@@ -69,6 +69,14 @@ export class Ray {
 		return this.color;
 	}
 
+	get_pos() {
+		return this.refpoint;
+	}
+
+	get_dir() {
+		return this.dir;
+	}
+
 	/** Trace and modify the ray along its path */
 	/* TODO: Divide this function */
 	trace() {

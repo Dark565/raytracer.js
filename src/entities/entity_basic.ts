@@ -14,18 +14,35 @@
  * limitations under the License.
  */
 
+import { EntityOtree } from '@app/context';
+import { EntitySet } from '@app/context';
 import { Entity } from '@app/entity';
 import { Point } from '@app/math/linalg';
 import { Material } from '@app/physics/material'
 
+/** BasicEntity is an entity with static pos and material parameters. */
 export abstract class BasicEntity extends Entity {
 	protected pos: Point;
 	protected material: Material;
+
+	constructor(entity_otree: EntityOtree, material: Material, pos: Point) {
+		super(entity_otree);
+		this.material = material;
+		this.pos = pos;
+	}
 
 	get_pos() { return this.pos; }
 	set_pos(p: Point): Point { 
 		const old_pos = this.pos;
 		this.pos = p;
+		this.refresh_introspection_data();
 		return old_pos;
+	}
+
+	get_material() { return this.material; }
+	set_material(material: Material): Material {
+		const old_material = this.material;
+		this.material = material;
+		return old_material;
 	}
 }

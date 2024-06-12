@@ -17,22 +17,34 @@
 /** @file The rendering context of the raytracer */
 
 import { Octree } from '@app/octree';
-import { SpaceOctree, OctreeWalker, OctreeDim } from '@app/octree_space';
+import { SpaceOctree, OctreeWalker, OctreeDim, SpaceOctreePos } from '@app/octree_space';
 import { Entity } from '@app/entity';
 
-/** EntityArray is an array storing indexes of entities */
-export class EntityArray {
-	private array: Array<Entity>;
-	elem() {
-		return this.array;
+export type EntityOtree       = SpaceOctree<EntitySet>;
+export type EntityOtreeWalker = OctreeWalker<EntitySet>;
+export type EntityOtreePos    = SpaceOctreePos<EntitySet>;
+
+/** EntitySet is a set of entities */
+export class EntitySet {
+	/** The EntitySet's octree position */
+	private octree_pos?: EntityOtreePos;
+	private set: Set<Entity>;
+
+	constructor(octree_pos?: EntityOtreePos) {
+		this.octree_pos = octree_pos;
+	}
+
+	get_set() {
+		return this.set;
+	}
+
+	get_octree_pos(): EntityOtreePos {
+		return this.octree_pos;
 	}
 }
 
-export type EntityOtree       = SpaceOctree<EntityArray>;
-export type EntityOtreeWalker = OctreeWalker<EntityArray>;
-
 export function new_entity_octree(dim: OctreeDim): EntityOtree {
-	return new Octree<EntityArray, OctreeDim>(dim);
+	return new Octree<EntitySet, OctreeDim>(dim);
 }
 
 export function new_entity_octree_walker(tree: EntityOtree): EntityOtreeWalker {

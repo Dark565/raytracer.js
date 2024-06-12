@@ -98,3 +98,9 @@ export class Octree<T, ID> {
 		return this.flags.invalidated;
 	}
 }
+
+/** Specific position within the octree */
+export interface OctreePos<T, ID> {
+	tree: Octree<T, ID>;
+	octant: number;
+}

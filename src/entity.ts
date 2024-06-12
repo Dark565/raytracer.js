@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-/** @file Definitions of data structures used for describing world entities. */
+/** @file Definitions of data structures used for describing scene entities. */
 
+import { EntityOtree } from '@app/context';
+import { EntitySet } from '@app/context';
 import { Point, Vector } from '@app/math/linalg';
 import { Ray } from '@app/raytracer';
 import { Material } from '@app/physics/material'
 
-/** Information about a ray collision. */
+/** Information about ray collision. */
 export interface CollisionInfo {
 	/** Point of the collision. (intersection point) */
 	point: Point;
@@ -31,9 +33,39 @@ export interface CollisionInfo {
 }
 
 export abstract class Entity {
+	/* for introspection */
+	/** The octree including this entity */
+	protected octree: EntityOtree;
+	/** The set of all EntitySet-s that include this entity */
+	protected entity_sets: Set<EntitySet>;
+
+	constructor(octree: EntityOtree, pos?: Point) {
+		this.octree = octree;
+		this.entity_sets = new Set;
+		this.set_pos(pos);
+	}
+
+	/** Get the position of an entity (typically its center point). */
+	abstract get_pos(): Point;
+	/** Get the position of an entity (typically its center point). */
+	abstract set_pos(p: Point): Point;
+
 	/** If a ray would collide, return CollisionInfo, otherwise null. */
 	abstract collision_info(ray: Ray): CollisionInfo|null;
-	/** Get position of an entity (typically its center point). */
-	abstract get_pos(): Point;
-	abstract set_pos(p: Point): Point;
+
+	abstract get_material(): Material;
+	/** Set material and return the old one */
+	abstract set_material(material: Material): Material;
+
+	/** Update this.entity_sets */
+	protected abstract refresh_introspection_data(): void;
+
+	get_entity_sets() {
+		return this.entity_sets;
+	}
+
+	get_octree() {
+		return this.octree;
+	}
+
 }

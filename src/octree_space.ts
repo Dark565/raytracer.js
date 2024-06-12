@@ -16,7 +16,7 @@
 
 /** @file The algorithms for operating on octrees in space */
 
-import { Octree, Octant } from '@app/octree';
+import { Octree, Octant, OctreePos } from '@app/octree';
 import { NODE_ORDER_MAP, NODE_ORDERS } from '@app/octree_const';
 import { vector, Vector, Point, Plane, Line, } from '@app/math/linalg';
 import * as space from '@app/space';
@@ -31,8 +31,12 @@ export interface OctreeDim {
 	size: number;
 }
 
+export type SpaceOctreePos<T> = OctreePos<T,OctreeDim>;
+
 export type SpaceOctree<T> = Octree<T,OctreeDim>;
 export type SpaceOctant<T> = Octant<T,OctreeDim>;
+
+/* TODO: Substitute the [SpaceOctree<T>,number] return type of certain functions to SpaceOctreePos<T>. */
 
 export function node_at_pos<T>(octree: SpaceOctree<T>, dim: OctreeDim, pos: Point): [SpaceOctree<T>,number]|null {
 	if (pos == undefined || !space.point_in_space(pos, {pos: dim.pos, size: vector(dim.size,dim.size,dim.size)}))
@@ -246,7 +250,7 @@ export class OctreeWalker<T> {
 
 		[[1,2],[0,2],[0,1]].forEach((x,i) => {
 			const axis_bit = 1<<i;
-			const plane = new Plane(vector(axis_bit&1, axis_bit&2, axis_bit&4), mid_point);
+			const plane = new Plane(vector(axis_bit&1, axis_bit&2, axis_bit&4), mid_point, { assume_normalized: true });
 			const cross_point = plane.line_intersection(line, { allow_infinity: true });
 			/* console.log(`line.dir.norm(): ${line.dir.normalize().v}`); */
 			//console.log(`cross_point: ${cross_point[0].v}`);

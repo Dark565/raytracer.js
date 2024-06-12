@@ -17,15 +17,20 @@
 import { Vector, Point, vector, point } from '@app/math/linalg';
 import { clamp } from '@app/math/mathutils';
 import { Octree } from '@app/octree';
-import { SpaceOctree, OctreeWalker } from '@app/octree_space';
-import { EntityArray, new_entity_octree } from '@app/context';
+import { SpaceOctree, OctreeWalker, new_subtree } from '@app/octree_space';
+import { EntityArray, EntityOtree, new_entity_octree } from '@app/context';
 import { Entity, CollisionInfo } from '@app/entity';
+import { SphereEntity } from '@app/entities/entity_sphere';
 import { Raytracer } from '@app/raytracer';
 import { Camera, CameraConfig } from '@app/view/camera';
 import { CanvasScreen } from '@app/view/screen_canvas';
 
 const CANVAS_NAME = 'rtcanvas';
 const REFMAX = 32;
+
+function generate_some_entities(ent_tree: EntityOtree) {
+	const entity_classes = [SphereEntity];
+}
 
 function main() {
 	const canvas = document.getElementById(CANVAS_NAME) as HTMLCanvasElement;
@@ -49,6 +54,8 @@ function main() {
 
 	const otree = new_entity_octree({pos: point(0,0,0), size: 1});
 	const raytracer = new Raytracer({refmax: REFMAX}, point(0.5,0.5,0.5), otree, camera, screen);
+
+	for 
 
 	//while (1) {
 		raytracer.trace_frame();
