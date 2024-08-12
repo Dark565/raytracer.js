@@ -123,6 +123,14 @@ export class Vector {
 		return res;
 	}
 
+	negate(): Vector {
+		let res = this.clone();
+		for (let i=0; i < res.size; ++i) {
+			res.v[i] = -res.v[i];
+		}
+		return res;
+	}
+
 	length_sq() {
 		return this.dot(this);
 	}
@@ -162,7 +170,7 @@ export class Vector {
 	rotate_2d(angle: number): Vector {
 		this.assert_size(2);
 
-		let base_y = vector(-this.y, this.x);
+		let base_y = this.ortho();
 
 		let [sin, cos] = [Math.sin(angle), Math.cos(angle)];
 		return this.scale(cos).add(base_y.scale(sin))
@@ -183,6 +191,22 @@ export class Vector {
 
 		let [sin, cos] = [Math.sin(angle), Math.cos(angle)];
 		return this.scale(cos).add(base_y.scale(sin))
+	}
+
+	/** Rotate a 3d vector around an axis by two times the half_angle angle */
+	rotate_axis(axis: Vector, half_angle: Vector): Vector {	
+		this.assert_size(3);
+		axis.assert_size(3);
+
+		const t_v = this;
+		const [q_r, q_v] = [half_angle.x, axis.scale(half_angle.y)];
+
+		const i_r = -q_v.dot(t_v);
+		const i_v = t_v.scale(q_r).add(q_v.cross(t_v));
+		//const r_r = i_r*q_r + i_v.dot(q_v);
+		const r_v = q_v.scale(-i_r).add(i_v.scale(q_r)).add(i_v.cross(q_v.negate()));
+
+		return r_v;
 	}
 
 	/** Get the vector orthogonal to the 2D vector */
