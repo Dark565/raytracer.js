@@ -281,8 +281,8 @@ export interface Entity {
 export class Plane implements Entity {
 	normal: Vector;
 	pos: Vector;
-	constructor(normal: Vector, pos: Vector) {
-		this.normal = normal.normalize();
+	constructor(normal: Vector, pos: Vector, flags: { assume_normalized?: boolean } = {}) {
+		this.normal = flags.assume_normalized ? normal : normal.normalize();
 		this.pos = pos;
 	}
 
