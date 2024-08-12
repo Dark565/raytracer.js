@@ -22,7 +22,7 @@ import { Entity } from '@app/entity';
 
 /** EntityArray is an array storing indexes of entities */
 export class EntityArray {
-	private array: Array<Entity>;
+	private array: Entity[];
 	elem() {
 		return this.array;
 	}

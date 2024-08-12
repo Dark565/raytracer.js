@@ -15,28 +15,23 @@
  */
 
 type Tuple8<T> = [T,T,T,T,T,T,T,T];
-export type Octant<T,ID=any> = Octree<T,ID>|T;
+export type Octant<T,ID> = Octree<T,ID>|undefined;
 
 /**
 * A class abstracting a dynamic octree
 */
 export class Octree<T, ID> {
 	parent?: Octree<T,ID>;
+	value?: T;
 	id: ID;
 	private flags: { invalidated: boolean };
 	private nodes: Tuple8<Octant<T,ID>>;
 
-	constructor(id: ID, parent?: Octree<T,ID>, ...nodes: Octant<T,ID>[]) {
-		if (nodes.length == 0) {
-			this.nodes = Array(8) as Tuple8<Octant<T,ID>>;
-		} else if (nodes.length <= 8) {
-			this.nodes = nodes.slice(0) as Tuple8<Octant<T,ID>>;
-		} else {
-			throw Error(`Invalid number of nodes passed (${nodes.length})`);
-		}
+	constructor(id: ID, parent?: Octree<T,ID>, value?: T) {
 		this.id = id;
 		this.parent = parent;
 		this.flags = { invalidated: false };
+		this.value = value
 	}
 
 	static is_at_bounds(n: number): boolean {
@@ -47,6 +42,7 @@ export class Octree<T, ID> {
 		if (!Octree.is_at_bounds(n))
 			throw Error("Node index out of range (0..7)");
 	}
+
 	/** Get the `n`-th node. */
 	get(n: number): Octant<T,ID> {
 		Octree.check_bounds(n);

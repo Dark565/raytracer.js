@@ -22,7 +22,7 @@ import { vector, Vector, Point, Plane, Line, } from '@app/math/linalg';
 import * as space from '@app/space';
 
 /** The geometric dimensions of the octree.
- *  The tree node should be interpreted as a big cube consisting of 8 smaller equal-sized cubes (nodes) adjacent to its vertices.
+ *  The tree geometric interpretation is a big cube consisting of 8 smaller equal-sized cubes (nodes) adjacent to its vertices.
  *  @prop {pos} the position of the root cube's vertex adjacent to the first node.
  *  @prop {size} the size of the root cube's edges.
  */
@@ -156,8 +156,8 @@ export class OctreeWalker<T> {
 					}
 					else {
 						this.cursor.node = next_index;
-						return [this.cursor.tree,next_index];
 					}
+					return [this.cursor.tree,next_index];
 				}
 			}
 		} while (this.step_back());

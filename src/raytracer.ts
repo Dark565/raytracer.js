@@ -41,7 +41,7 @@ export class Ray {
 	private refpoint: Point;
 	/** Current direction of the ray */
 	private dir: Vector;
-	/** Current color of the ray; can be altered by materials */
+	/** Current color of the ray; modulated by materials */
 	private color: Color;
 	/** The OctreeWalker assigned to the ray */
 	private walker: EntityOtreeWalker;
@@ -77,11 +77,12 @@ export class Ray {
 		walker.start_point = (this.refpoint);
 		let tree_node: [EntityOtree, number];
 		while ((tree_node = walker.next()) != undefined) {
-			const search_array = tree_node[0].get(tree_node[1]) as EntityArray;
+			const search_array = tree_node[0].get(tree_node[1]).value;
+
 			let collision_info: CollisionInfo;
 			for (let entity of search_array.elem()) {
 				collision_info = entity.collision_info(this);
-				/* TODO: Probably find out a better way for getting rid of the previous collision point */
+				/* TODO: Probably find a better way for getting rid of the previous collision point */
 				if (collision_info != undefined && !collision_info.point.near_equal(this.refpoint, 1e-6))
 					break;
 			}
