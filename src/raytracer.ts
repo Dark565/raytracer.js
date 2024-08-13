@@ -78,7 +78,7 @@ export class Ray {
 	}
 
 	/** Trace and modify the ray along its path */
-	/* TODO: Divide this function */
+	/* TODO: Split this function */
 	trace() {
 		const walker = this.walker;
 		walker.direction = this.dir;
@@ -124,7 +124,7 @@ export class Ray {
 			}
 		}
 
-		/* If there is nothing more to intersect, modulate the ray color to black.
+		/* If there is nothing more to intersect, modulate the ray color to ~black.
 		 * TODO: Define the Skybox class which will be used in this case
 		 *       to get a specific color.
 		 */

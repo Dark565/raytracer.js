@@ -247,6 +247,12 @@ export function vector(...numbers: number[]): Vector {
 	return new Vector(numbers);
 }
 
+
+/** Get an n-dimensional vector with all fields to 1 */
+export function one_vector(ndim: number): Vector {
+	return vector(...Array(ndim).fill(1));
+}
+
 export type Point = Vector;
 export var point = vector;
 

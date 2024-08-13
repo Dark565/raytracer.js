@@ -57,8 +57,9 @@ export abstract class Entity {
 	/** Set material and return the old one */
 	abstract set_material(material: Material): Material;
 
-	/** Update this.entity_sets */
-	protected abstract refresh_introspection_data(): void;
+	/** Get the axis-aligned bounding box for the entity.
+	 * @returns A pair: the attachment point of the first vertex and the length of edges. */
+	abstract get_aabb(): [Point, number];
 
 	get_entity_sets() {
 		return this.entity_sets;

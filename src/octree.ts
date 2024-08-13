@@ -93,6 +93,30 @@ export class Octree<T, ID> {
 	is_invalid(): boolean {
 		return this.flags.invalidated;
 	}
+
+	get_root(): Octree<T, ID> {
+		let next_node: Octree<T, ID> = this;
+		let cur_node: Octree<T, ID>;
+		do {
+			cur_node = next_node;
+			next_node = cur_node.parent;
+		} while (next_node != undefined);
+
+		return cur_node;
+	}
+
+	get_relative_level(root: Octree<T, ID>): number {
+		let level = 0;
+		let cur_node: Octree<T, ID> = this;
+		while (cur_node != undefined && cur_node != root) {
+			level++;
+			cur_node = cur_node.parent;
+		}
+		if (cur_node == undefined)
+			throw Error("The specified root tree is not the node's ancestor")
+
+		return level;
+	}
 }
 
 /** Specific position within the octree */

@@ -36,11 +36,15 @@ export type SpaceOctreePos<T> = OctreePos<T,OctreeDim>;
 export type SpaceOctree<T> = Octree<T,OctreeDim>;
 export type SpaceOctant<T> = Octant<T,OctreeDim>;
 
-export function node_at_pos<T>(octree: SpaceOctree<T>, dim: OctreeDim, pos: Point): SpaceOctreePos<T>|null {
-	if (pos == undefined || !space.point_in_space(pos, {pos: dim.pos, size: vector(dim.size,dim.size,dim.size)}))
+export function node_at_pos<T>(octree: SpaceOctree<T>, pos: Point, flags: { start_from_current?: boolean } = {}): SpaceOctreePos<T>|null {
+	const dim = octree.id;
+	if (pos == undefined || !space.point_in_space(pos, {pos: dim.pos, size: vector(1,1,1).scale(dim.size)}))
 		return null;
 
 	let cur_node = octree;
+	if (!flags.start_from_current)
+		cur_node = cur_node.get_root();
+
 	let cur_index = 0;
 	let next_dim: OctreeDim = { pos: new Vector(dim.pos), size: dim.size };
 	let next_node: SpaceOctant<T> = cur_node;
@@ -187,7 +191,7 @@ export class OctreeWalker<T> {
 		/* Try the tree at the cursor first to optimize traversal out */
 		for (let tree of [this.cursor.tree, this.tree]) {
 			if (tree != undefined) {
-				pos_node = node_at_pos(tree, tree.id, point);
+				pos_node = node_at_pos(tree, point);
 				if (pos_node != undefined)
 					break;
 			}

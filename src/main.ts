@@ -21,6 +21,7 @@ import { SpaceOctree, OctreeWalker, new_subtree } from '@app/octree_space';
 import { EntityArray, EntityOtree, new_entity_octree } from '@app/context';
 import { Entity, CollisionInfo } from '@app/entity';
 import { SphereEntity } from '@app/entities/entity_sphere';
+import { BoxEntity } from '@app/entities/entity_box';
 import { Raytracer } from '@app/raytracer';
 import { Camera, CameraConfig } from '@app/view/camera';
 import { CanvasScreen } from '@app/view/screen_canvas';
@@ -28,8 +29,14 @@ import { CanvasScreen } from '@app/view/screen_canvas';
 const CANVAS_NAME = 'rtcanvas';
 const REFMAX = 32;
 
-function generate_some_entities(ent_tree: EntityOtree) {
-	const entity_classes = [SphereEntity];
+function generate_some_aligned_entities(ent_tree: EntityOtree, n_entities: number) {
+	const entity_classes = [SphereEntity, BoxEntity];
+	for (let i = 0; i < n_entities; i++) {
+		const level = 3 + Math.ceil(Math.random() * 7);
+		const n_quant = 1 << (level);
+		const size = 1 / n_quant;
+		const [x, y, z] = Array(3).map(_ => { Math.floor(Math.random() * n_quant) * size });
+	}
 }
 
 function main() {
@@ -54,8 +61,6 @@ function main() {
 
 	const otree = new_entity_octree({pos: point(0,0,0), size: 1});
 	const raytracer = new Raytracer({refmax: REFMAX}, point(0.5,0.5,0.5), otree, camera, screen);
-
-	for 
 
 	//while (1) {
 		raytracer.trace_frame();

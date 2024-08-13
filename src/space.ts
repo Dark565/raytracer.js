@@ -14,11 +14,16 @@
  * limitations under the License.
  */
 
-import { Point, Vector } from '@app/math/linalg';
+import { Point, Vector, vector } from '@app/math/linalg';
 
 export interface Space {
 	pos: Point;
 	size: Vector;
+}
+
+export interface AABB {
+	pos: Point;
+	size: number;
 }
 
 export function verify_space(s: Space): void {
@@ -37,5 +42,15 @@ export function point_in_space(point: Point, space: Space): boolean {
 				return false;
 	}
 
+	return true;
+}
+
+export function aabb_in_space(aabb: AABB, space: Space): boolean {
+	for (let vtx = 0; vtx < 8; vtx++) {
+		const [x, y, z] = [vtx & 0x1, (vtx & 0x2) >> 1, (vtx & 0x3) >> 2];
+		const vtx_pos = aabb.pos.add(vector(x,y,z).scale(aabb.size));
+		if (!point_in_space(vtx_pos, space))
+			return false;
+	}
 	return true;
 }

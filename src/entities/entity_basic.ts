@@ -15,7 +15,6 @@
  */
 
 import { EntityOtree } from '@app/context';
-import { EntitySet } from '@app/context';
 import { Entity } from '@app/entity';
 import { Point } from '@app/math/linalg';
 import { Material } from '@app/physics/material'

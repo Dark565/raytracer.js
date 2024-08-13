@@ -18,3 +18,25 @@
 export function clamp(number: number, min: number, max: number): number {
 	return Math.max(Math.min(number, max), min);
 }
+
+export function min<T>(list: Iterable<T>, cmp_fn: (a:T, b:T) => number): T {
+	let iter = list[Symbol.iterator]();
+	let next = iter.next();
+	let min: T = next.value;
+	while (!(next = iter.next()).done) {
+		if (cmp_fn(next.value, min) < 0)
+			min = next.value;
+	}
+	return min;
+}
+
+export function max<T>(list: Iterable<T>, cmp_fn: (a:T, b:T) => number): T {
+	let iter = list[Symbol.iterator]();
+	let next = iter.next();
+	let min: T = next.value;
+	while (!(next = iter.next()).done) {
+		if (cmp_fn(next.value, min) > 0)
+			min = next.value;
+	}
+	return min;
+}

@@ -16,37 +16,18 @@
 
 import { EntitySet, EntityOtree } from '@app/context';
 import { Ray } from '@app/raytracer';
-import { Point } from '@app/math/linalg';
+import { Point, point } from '@app/math/linalg';
 import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
 import { Material } from '@app/physics/material';
 import * as linalg from '@app/math/linalg';
 
-/* FIXME:
- * Entities can encompass multiple octree nodes (entity sets).
- * 1st approach (complex, would provide good culling for high tree heights, but requires a lot of computation while refreshing):
- *    take two AABB-s: the interior and the exterior.
- *    Produce the interior and exterior node sets, each one including the nodes intersected by the particular AABB.
- *    Subtract the exterior and interior node sets - the resulting one roughly includes the nodes of interest.
- *
- * 2nd approach (reasonably best, but will show the main con of octrees in non-voxel related scenarios: inefficiency when object alignment is odd):
- *    refactor the octree implementation to allow adding elements at nodes themselves, not just octants and
- *    put oddly aligned/sized entities in nodes completely encompassing them.
- *
- * 3nd approach (simplest and best for the scope of the project) Keep octree implementation as-is, but enforce a proper alignment and size (one per a node) for all entities.
- *
- * 4th approach (DO NOT!): implement BVH or KD-trees.
- */
-
-
 export class SphereEntity extends BasicEntity {
 	private radius: number;
 
 	constructor(entity_otree: EntityOtree, material: Material, pos: Point, radius: number) {
-		throw new Error("Currently unimplemented!");
-
-		//super(entity_otree, material, pos);
-		//this.radius = radius;
+		super(entity_otree, material, pos);
+		this.radius = radius;
 	}
 
 	get_radius(): number {
@@ -72,7 +53,11 @@ export class SphereEntity extends BasicEntity {
 		return coll_info;
 	}
 
-	protected refresh_introspection_data() {
-		// to implement
+	get_aabb(): [Point, number] {
+		const radius = this.get_radius();
+		return [
+			this.get_pos().sub(point(radius, radius, radius)),
+			radius * 2
+		]
 	}
 }
