@@ -17,6 +17,8 @@
 type Tuple8<T> = [T,T,T,T,T,T,T,T];
 export type Octant<T,ID> = Octree<T,ID>|undefined;
 
+export class OctreeRootError extends Error {}
+
 /**
 * A class abstracting a dynamic octree
 */
@@ -105,7 +107,8 @@ export class Octree<T, ID> {
 		return cur_node;
 	}
 
-	get_relative_level(root: Octree<T, ID>): number {
+	/** Return a positive nest level of this node inside another node */
+	get_relative_level_positive(root: Octree<T, ID>): number {
 		let level = 0;
 		let cur_node: Octree<T, ID> = this;
 		while (cur_node != undefined && cur_node != root) {
@@ -113,9 +116,23 @@ export class Octree<T, ID> {
 			cur_node = cur_node.parent;
 		}
 		if (cur_node == undefined)
-			throw Error("The specified root tree is not the node's ancestor")
+			throw new OctreeRootError("The specified root tree is not the node's ancestor")
 
 		return level;
+	}
+
+	/** Return a positive or negative nest level of this node inside another node.
+	 * Negative nest means that the node is above the root node. */
+	get_relative_level(root: Octree<T, ID>): number {
+		try {
+			return this.get_relative_level_positive(root);
+		} catch (e) {
+			if (e instanceof OctreeRootError) {
+				return -root.get_relative_level_positive(this);
+			} else {
+				throw e;
+			}
+		}
 	}
 }
 

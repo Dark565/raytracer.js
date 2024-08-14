@@ -18,9 +18,11 @@ import { Vector, Point, vector, point } from '@app/math/linalg';
 import { clamp } from '@app/math/mathutils';
 import { Octree } from '@app/octree';
 import { SpaceOctree, OctreeWalker, new_subtree } from '@app/octree_space';
-import { EntityArray, EntityOtree, new_entity_octree } from '@app/context';
+import { EntitySet, EntityOtree, new_entity_octree, add_entity_to_octree } from '@app/octree_entity';
 import { Entity, CollisionInfo } from '@app/entity';
 import { SphereEntity } from '@app/entities/entity_sphere';
+import * as material from '@app/material';
+import { SolidMaterial } from '@app/materials/material_solid';
 import { BoxEntity } from '@app/entities/entity_box';
 import { Raytracer } from '@app/raytracer';
 import { Camera, CameraConfig } from '@app/view/camera';
@@ -29,13 +31,15 @@ import { CanvasScreen } from '@app/view/screen_canvas';
 const CANVAS_NAME = 'rtcanvas';
 const REFMAX = 32;
 
-function generate_some_aligned_entities(ent_tree: EntityOtree, n_entities: number) {
-	const entity_classes = [SphereEntity, BoxEntity];
+function generate_some_aligned_entities(tree: EntityOtree, material: material.Material, n_entities: number) {
+	//const entity_classes = [SphereEntity, BoxEntity];
 	for (let i = 0; i < n_entities; i++) {
 		const level = 3 + Math.ceil(Math.random() * 7);
 		const n_quant = 1 << (level);
 		const size = 1 / n_quant;
-		const [x, y, z] = Array(3).map(_ => { Math.floor(Math.random() * n_quant) * size });
+		const [x, y, z] = Array(3).map(_ => { return ((Math.random() * n_quant) << 0) * size + size/2 });
+		const entity = new BoxEntity(undefined, material, point(x,y,z), size);
+		add_entity_to_octree(tree, entity, { max_in_depth: 10, max_out_depth: 0 });
 	}
 }
 
@@ -59,12 +63,14 @@ function main() {
 	const screen = new CanvasScreen(canvas_ctx, { buffer_pixels: true });
 	const camera = new Camera(camera_conf);
 
-	const otree = new_entity_octree({pos: point(0,0,0), size: 1});
+	const otree = new_entity_octree({pos: point(0,0,0), size: 1}, undefined);
 	const raytracer = new Raytracer({refmax: REFMAX}, point(0.5,0.5,0.5), otree, camera, screen);
 
-	//while (1) {
-		raytracer.trace_frame();
-	//}
+	const gen_material = new SolidMaterial({r: 1.0, g: 0.33, b: 1.0, a: 1.0}, true, material.ResponseType.REFLECTION);
+
+	generate_some_aligned_entities(otree, gen_material, 3);
+
+	raytracer.trace_frame();
 }
 
 main();

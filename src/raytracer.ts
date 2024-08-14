@@ -16,10 +16,10 @@
 
 import { Vector, Point } from '@app/math/linalg';
 import { clamp } from '@app/math/mathutils';
-import { EntityArray, new_entity_octree_walker, EntityOtree, EntityOtreeWalker, EntityOtreePos } from '@app/context';
+import { EntitySet, new_entity_octree_walker, EntityOtree, EntityOtreeWalker, EntityOtreePos } from '@app/octree_entity';
 import { Entity, CollisionInfo } from '@app/entity';
 import { Color, color, clone_color, mul_color } from '@app/physics/color';
-import * as material from '@app/physics/material';
+import * as material from '@app/material';
 import { Camera } from '@app/view/camera';
 import { Screen } from '@app/view/screen';
 

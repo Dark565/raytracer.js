@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { EntityOtree } from '@app/context';
+import { EntityOtree } from '@app/octree_entity';
 import { Entity } from '@app/entity';
 import { Point } from '@app/math/linalg';
-import { Material } from '@app/physics/material'
+import { Material } from '@app/material'
 
 /** BasicEntity is an entity with static pos and material parameters. */
 export abstract class BasicEntity extends Entity {
@@ -31,10 +31,9 @@ export abstract class BasicEntity extends Entity {
 	}
 
 	get_pos() { return this.pos; }
-	set_pos(p: Point): Point { 
+	_set_pos(p: Point): Point { 
 		const old_pos = this.pos;
 		this.pos = p;
-		this.refresh_introspection_data();
 		return old_pos;
 	}
 

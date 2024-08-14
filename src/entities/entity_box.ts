@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { EntitySet, EntityOtree } from '@app/context';
+import { EntitySet, EntityOtree } from '@app/octree_entity';
 import { Ray } from '@app/raytracer';
 import { Point, Vector, point, vector } from '@app/math/linalg';
 import { point_in_space } from '@app/space'; 
 import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
-import { Material } from '@app/physics/material';
+import { Material } from '@app/material';
 import * as linalg from '@app/math/linalg';
 
 export class BoxEntity extends BasicEntity {

@@ -16,11 +16,10 @@
 
 /** @file Definitions of data structures used for describing scene entities. */
 
-import { EntityOtree } from '@app/context';
-import { EntitySet } from '@app/context';
+import { EntityOtree } from '@app/octree_entity';
 import { Point, Vector } from '@app/math/linalg';
 import { Ray } from '@app/raytracer';
-import { Material } from '@app/physics/material'
+import { Material } from '@app/material'
 
 /** Information about ray collision. */
 export interface CollisionInfo {
@@ -35,20 +34,30 @@ export interface CollisionInfo {
 export abstract class Entity {
 	/* for introspection */
 	/** The octree including this entity */
-	protected octree: EntityOtree;
-	/** The set of all EntitySet-s that include this entity */
-	protected entity_sets: Set<EntitySet>;
+	protected _octree?: EntityOtree;
 
-	constructor(octree: EntityOtree, pos?: Point) {
-		this.octree = octree;
-		this.entity_sets = new Set;
-		this.set_pos(pos);
+	constructor(octree?: EntityOtree, pos?: Point) {
+		this._octree = octree;
+		this._set_pos(pos);
+	}
+
+	set_octree(tree: EntityOtree, flags: { keep_in_current?: boolean } = {}) {
+		if (!flags.keep_in_current && this._octree != undefined)
+			this._octree.value.set.delete(this);
+
+		this._octree = tree;
+	}
+
+	get octree() {
+		return this._octree;
 	}
 
 	/** Get the position of an entity (typically its center point). */
 	abstract get_pos(): Point;
-	/** Get the position of an entity (typically its center point). */
-	abstract set_pos(p: Point): Point;
+	/** Set the position of an entity (typically its center point).
+	 * This method is for the library use and shouldn't be called directly.
+	 * Use move_entity() from octree_entity.ts instead. */
+	abstract _set_pos(p: Point): Point;
 
 	/** If a ray would collide, return CollisionInfo, otherwise null. */
 	abstract collision_info(ray: Ray): CollisionInfo|null;
@@ -60,13 +69,5 @@ export abstract class Entity {
 	/** Get the axis-aligned bounding box for the entity.
 	 * @returns A pair: the attachment point of the first vertex and the length of edges. */
 	abstract get_aabb(): [Point, number];
-
-	get_entity_sets() {
-		return this.entity_sets;
-	}
-
-	get_octree() {
-		return this.octree;
-	}
 
 }

@@ -1,4 +1,4 @@
-import { StaticMaterial, ResponseType } from '@app/physics/material';
+import { StaticMaterial, ResponseType } from '@app/material';
 import { Color, clone_color, mul_color } from '@app/physics/color';
 import { Ray } from '@app/raytracer';
 import { Point } from '@app/math/linalg';
