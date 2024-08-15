@@ -59,7 +59,7 @@ export function point_in_space(point: Point, space: Space): boolean {
 }
 
 /** Check whether an interior space is fully within an exterior space */
-export function space_in_space(exterior: Space, interior: Space): boolean {
+export function space_in_space(interior: Space, exterior: Space): boolean {
 	assert_space_compatibility(exterior, interior);
 
 	const exterior_end = exterior.pos.add(exterior.size);

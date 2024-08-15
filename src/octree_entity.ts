@@ -35,6 +35,7 @@ export class EntitySet {
 
 	constructor(octree_pos?: EntityOtreePos) {
 		this._octree_pos = octree_pos;
+		this._set = new Set;
 	}
 
 	get set() {
@@ -59,6 +60,9 @@ export function get_covering_node_for_entity(tree: EntityOtree, entity: Entity):
 	const aabb = entity.get_aabb();
 	const aabb_iface: AABB = {pos: aabb[0], size: aabb[1]};
 	const deepest_node = node_at_pos(tree, aabb[0]);
+
+	if (deepest_node == undefined)
+		return undefined;
 
 	let cur_tree = deepest_node.tree;
 

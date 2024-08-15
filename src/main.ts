@@ -37,9 +37,9 @@ function generate_some_aligned_entities(tree: EntityOtree, material: material.Ma
 		const level = 3 + Math.ceil(Math.random() * 7);
 		const n_quant = 1 << (level);
 		const size = 1 / n_quant;
-		const [x, y, z] = Array(3).map(_ => { return ((Math.random() * n_quant) << 0) * size + size/2 });
+		const [x, y, z] = [0,0,0].map(_ => { return ((Math.random() * n_quant) << 0) * size + size/2 });
 		const entity = new BoxEntity(undefined, material, point(x,y,z), size);
-		add_entity_to_octree(tree, entity, { max_in_depth: 10, max_out_depth: 0 });
+		add_entity_to_octree(tree, entity, { max_in_depth: 10, max_out_depth: 10 });
 	}
 }
 
