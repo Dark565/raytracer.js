@@ -34,6 +34,7 @@ export class Octree<T, ID> {
 		this.parent = parent;
 		this.flags = { invalidated: false };
 		this.value = value
+		this.nodes = Array(8).fill(undefined) as Tuple8<Octant<T,ID>>;
 	}
 
 	static is_at_bounds(n: number): boolean {

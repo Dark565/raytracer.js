@@ -55,6 +55,10 @@ export class Vector {
 		return this.v[2];
 	}
 
+	get w(): number {
+		return this.z[3];
+	}
+
 	copy_from(x: Vector) {
 		this.v = x.v.slice(0);
 		this.size = x.size;
@@ -64,13 +68,17 @@ export class Vector {
 		return new Vector(this);
 	}
 
-	private check_compatibility(v2: Vector) {
-		if (this.size != v2.size)
+	is_compatible(v2: Vector) {
+		return this.size == v2.size;
+	}
+
+	assert_compatibility(v2: Vector) {
+		if (!this.is_compatible(v2))
 			throw new VectorError("this and v2 must have the same size");
 	}
 
 	dot(v2: Vector) {
-		this.check_compatibility(v2);
+		this.assert_compatibility(v2);
 
 		let sum = 0;
 		for (let i=0; i < this.size; i++) {
@@ -91,14 +99,14 @@ export class Vector {
 	}
 
 	hadamard(v2: Vector) {
-		this.check_compatibility(v2);
+		this.assert_compatibility(v2);
 		let res = new Vector;
 		for (let i=0; i < this.size; i++)
 			res.v[i] = this.v[i] * v2.v[i];
 	}
 
 	add(v2: Vector) {
-		this.check_compatibility(v2);
+		this.assert_compatibility(v2);
 		let res = this.clone();
 		for (let i=0; i < this.size; i++) {
 			res.v[i] += v2.v[i];
@@ -107,7 +115,7 @@ export class Vector {
 	}
 
 	sub(v2: Vector) {
-		this.check_compatibility(v2);
+		this.assert_compatibility(v2);
 		let res = this.clone();
 		for (let i=0; i < this.size; i++) {
 			res.v[i] -= v2.v[i];
@@ -222,7 +230,7 @@ export class Vector {
 
 	/** Compare two vectors */
 	equal(v2: Vector) {
-		this.check_compatibility(v2);
+		this.assert_compatibility(v2);
 		for (let i = 0; i < this.size; i++) {
 			if (this.v[i] != v2.v[i])
 				return false;
@@ -233,7 +241,7 @@ export class Vector {
 
 	/** Compare two vectors with space for error */
 	near_equal(v2: Vector, max_diff: number) {
-		this.check_compatibility(v2);
+		this.assert_compatibility(v2);
 		for (let i = 0; i < this.size; i++) {
 			if (this.v[i] - v2.v[i] > max_diff)
 				return false;

@@ -1,5 +1,4 @@
 import { Camera, CameraConfig } from '@app/view/camera';
-import { point, vector } from '@app/math/linalg';
 
 const camera_conf: CameraConfig = { 
 	fov_v: Math.PI,

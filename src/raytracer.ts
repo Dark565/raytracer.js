@@ -85,10 +85,10 @@ export class Ray {
 		walker.start_point = (this.refpoint);
 		let tree_node: EntityOtreePos;
 		while ((tree_node = walker.next()) != undefined) {
-			const search_array = tree_node[0].get(tree_node[1]).value;
+			const search_array = tree_node.tree.get(tree_node.octant).value;
 
 			let collision_info: CollisionInfo;
-			for (let entity of search_array.elem()) {
+			for (let entity of search_array.set) {
 				collision_info = entity.collision_info(this);
 				/* TODO: Probably find a better way for getting rid of the previous collision point */
 				if (collision_info != undefined && !collision_info.point.near_equal(this.refpoint, 1e-6))

@@ -60,10 +60,10 @@ export function get_covering_node_for_entity(tree: EntityOtree, entity: Entity):
 	const aabb_iface: AABB = {pos: aabb[0], size: aabb[1]};
 	const deepest_node = node_at_pos(tree, aabb[0]);
 
-	let cur_tree = deepest_node[0];
+	let cur_tree = deepest_node.tree;
 
 	do {
-		const space = {pos: cur_tree.id.pos, size: cur_tree.id.size};
+		const space = {pos: cur_tree.id.pos, size: vector(1,1,1).scale(cur_tree.id.size)};
 		if (aabb_in_space(aabb_iface, space))
 			break;
 
@@ -149,6 +149,8 @@ function extend_tree_outside_to_fit_up_to_depth(root: EntityOtree, node: EntityO
 				fit_found = true;
 				break;
 			}
+
+			cur_depth++;
 		}
 
 		if (!fit_found)

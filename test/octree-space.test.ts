@@ -3,7 +3,7 @@ import * as space from '@app/octree_space';
 import { point } from '@app/math/linalg';
 
 test('point_at_pos() fuzzy test', ()=>{
-		const otree_dim = { pos: point(0,0,0), size: 1 };
+		const otree_dim: space.OctreeDim = { pos: point(0,0,0), size: 1 };
 		const otree = new Octree(otree_dim);
 
 		const inner_tree = space.new_subtree(otree, 0);
@@ -27,8 +27,8 @@ test('point_at_pos() fuzzy test', ()=>{
 				expected_node = inner_tree;
 			}
 
-			const node_desc = space.node_at_pos(otree, otree_dim, p);
-			expect(node_desc).toEqual([expected_node,rnd]);
+			const node_desc = space.node_at_pos(otree, p);
+			expect(node_desc).toEqual({tree: expected_node, octant: rnd});
 		}
 });
 
@@ -36,9 +36,10 @@ test('point_at_pos() discrete tests', ()=>{
 	const otree_dim: space.OctreeDim = { pos: point(0,0,0), size: 1 };
 	const otree = new Octree(otree_dim);
 
-	otree.set(3, new Octree(1));
-	otree.subtree(3).set(5, new Octree(2));
+	let inner = space.new_subtree(otree, 3);
+	let inner_inner = space.new_subtree(inner, 5);
 
-	let node_desc = space.node_at_pos(otree, otree_dim, point(0.75,0.5,0.25));
-	expect(node_desc).toEqual([otree.subtree(3).subtree(5), 0]);
+	let node_desc = space.node_at_pos(otree, point(0.75,0.5,0.25));
+
+	expect(node_desc).toEqual({tree: otree.subtree(3).subtree(5), octant: 0});
 });

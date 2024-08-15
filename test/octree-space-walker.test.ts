@@ -7,8 +7,7 @@ function walker_one_level_test<T>(walker: space.OctreeWalker<T>, pos: linalg.Poi
 	walker.start_point = pos;
 	walker.direction = dir;
 	const crosses = Array.from(walker.each_cross({include_undefined: true}));
-	console.log(crosses.map(x=>x[1]));
-	expect(crosses.map(x => x[1])).toEqual(expected_crosses);
+	expect(crosses.map(x => x.octant)).toEqual(expected_crosses);
 }
 
 test('OctreeWalker sanity', () => {

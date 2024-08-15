@@ -150,7 +150,7 @@ export class Camera {
 	}
 
 	/** Limit or unlimit the camera's vertical rotation */
-	set_vertical_lock(on: boolean) {
+	set_vertical_lock_(on: boolean) {
 		this.conf.flags.vertical_locked = on;
 	}
 

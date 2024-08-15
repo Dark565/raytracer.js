@@ -16,6 +16,10 @@
 
 import { Point, Vector, point, vector } from '@app/math/linalg';
 
+/* TODO: Add a variadic number parameter to the Vector class for denoting its size
+ * which will allow to refactor this code to be statically checked instead of
+ * performing runtime assertions. */
+
 export interface Space {
 	pos: Point;
 	size: Vector;
@@ -26,15 +30,24 @@ export interface AABB {
 	size: number;
 }
 
-export function verify_space(s: Space): void {
-	if (s.pos.size != s.size.size)
-		throw Error("invalid space; pos and size vectors must be of the same size");
+export function assert_space_validity(s: Space): void {
+	s.pos.assert_compatibility(s.size);
+}
+
+export function assert_aabb_and_space_compatibility(aabb: AABB, s: Space): void {
+	assert_space_validity(s);
+	aabb.pos.assert_compatibility(s.pos);
+}
+
+export function assert_space_compatibility(a: Space, b: Space): void {
+	assert_space_validity(a);
+	assert_space_validity(b);
+	a.pos.assert_compatibility(b.pos);
 }
 
 export function point_in_space(point: Point, space: Space): boolean {
-	verify_space(space);
-	if (point.size != space.pos.size)
-		throw Error("pos and space got incompatible size parameters");
+	assert_space_validity(space);
+	point.assert_compatibility(space.pos);
 
 	for (let i = 0; i < point.size; i++) {
 		if (!(point.v[i] >= space.pos.v[i] 
@@ -47,10 +60,12 @@ export function point_in_space(point: Point, space: Space): boolean {
 
 /** Check whether an interior space is fully within an exterior space */
 export function space_in_space(exterior: Space, interior: Space): boolean {
+	assert_space_compatibility(exterior, interior);
+
 	const exterior_end = exterior.pos.add(exterior.size);
 	const interior_end = interior.pos.add(interior.size);
 
-	for (let dim = 0; dim < 3; dim++) {
+	for (let dim = 0; dim < exterior.pos.size; dim++) {
 		if (!(interior.pos.v[dim] >= exterior.pos.v[dim] && interior_end.v[dim] < exterior_end.v[dim]))
 			return false;
 	}
@@ -59,11 +74,15 @@ export function space_in_space(exterior: Space, interior: Space): boolean {
 }
 
 export function aabb_in_space(aabb: AABB, space: Space): boolean {
+	assert_aabb_and_space_compatibility(aabb, space);
+
 	return space_in_space({pos: aabb.pos, size: vector(1,1,1).scale(aabb.size)}, space);
 }
 
 /** Get the overlap space of b into a */
 export function get_overlap_space(a: Space, b: Space): Space {
+	assert_space_compatibility(a,b);
+
 	let overlap: Space = { pos: point(NaN,NaN,NaN), size: vector(NaN,NaN,NaN) };
 	const a_end = a.pos.add(a.size);
 	const b_end = b.pos.add(b.size);
