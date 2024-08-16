@@ -94,7 +94,7 @@ function extend_tree_inside_to_fit_up_to_depth(root: EntityOtree, node: EntityOt
 	let cur_depth = node.get_relative_level(root);
 	let cur_node = node;
 	while (cur_depth < max_depth) {
-		const [x, y, z] = aabb.pos.sub(cur_node.id.pos).scale(cur_node.id.size/2).v.map(x => x << 0);
+		const [x, y, z] = aabb.pos.sub(cur_node.id.pos).scale(2.0/cur_node.id.size).v.map(x => x << 0);
 		const space = {pos: cur_node.id.pos.add(vector(x,y,z).scale(cur_node.id.size/2)), size: vector(1,1,1).scale(cur_node.id.size/2)};
 
 		if (!aabb_in_space(aabb, space))
@@ -134,13 +134,18 @@ function extend_tree_outside_to_fit_up_to_depth(root: EntityOtree, node: EntityO
 		while (cur_depth < max_depth) {
 			const aligned_aabb_node_pos = aabb.pos.sub(cur_node.id.pos).scale(1.0/cur_node.id.size);
 			for (let dim = 0; dim < 3; ++dim)
-				aligned_aabb_node_pos.v[dim] = clamp(Math.round(aligned_aabb_node_pos.v[dim]), -1, 0); 
+				aligned_aabb_node_pos.v[dim] = clamp(Math.floor(aligned_aabb_node_pos.v[dim]), -1, 0); 
 
 			const parent_pos = cur_node.id.pos.add(aligned_aabb_node_pos.scale(cur_node.id.size));
 			const parent_size = cur_node.id.size*2;
-			const cur_idx_within_parent = ((aligned_aabb_node_pos.v[2] + 1) << 2) |
-																	  ((aligned_aabb_node_pos.v[1] + 1) << 1) |
-																		((aligned_aabb_node_pos.v[0] + 1) << 0);
+			const cur_idx_within_parent = ((-aligned_aabb_node_pos.v[2]) << 2) |
+																	  ((-aligned_aabb_node_pos.v[1]) << 1) |
+																		((-aligned_aabb_node_pos.v[0]) << 0);
+
+			console.log(`aabb pos: ${aabb.pos.v}`)
+			console.log(`parent_pos: ${parent_pos.v}`);
+			console.log(`node_pos: ${cur_node.id.pos.v}`);
+			console.log(`cur_idx_within_parent: ${cur_idx_within_parent}`);
 
 			const new_parent = new_entity_octree({pos: parent_pos, size: parent_size}, undefined);
 
@@ -170,11 +175,13 @@ export function add_entity_to_octree(tree: EntityOtree, entity: Entity, config: 
 	let fitting_node = get_covering_node_for_entity(tree, entity);
 	// entity can't fit the tree
 	if (fitting_node == undefined) {
-		fitting_node = extend_tree_outside_to_fit_up_to_depth(tree, tree, ent_aabb_iface, config.max_out_depth);
+		const abs_root = tree.get_root();
+		fitting_node = extend_tree_outside_to_fit_up_to_depth(tree, abs_root, ent_aabb_iface, config.max_out_depth);
 	}
 
 	fitting_node = extend_tree_inside_to_fit_up_to_depth(tree, fitting_node, ent_aabb_iface, config.max_in_depth);
 	fitting_node.value.set.add(entity);
+	entity.set_octree(fitting_node);
 
 	return fitting_node;
 }

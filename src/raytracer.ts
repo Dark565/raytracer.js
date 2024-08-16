@@ -28,8 +28,9 @@ export interface RaytracerConfig {
 	refmax: number;
 };
 
-const COLOR_SKY_BLACK = color(1e-1, 1e-1, 1e-1);
-const COLOR_WHITE     = color(1,1,1);
+const COLOR_SKY   = color(1e-1, 1e-1, 0.6);
+const COLOR_BLACK = color(0,0,0);
+const COLOR_WHITE = color(1,1,1);
 
 /* Ray description class */
 export class Ray {
@@ -46,6 +47,8 @@ export class Ray {
 	/** The OctreeWalker assigned to the ray */
 	private walker: EntityOtreeWalker;
 
+	private static debug_ray_count = 0;
+
 	constructor(refmax: number, start_point: Point, dir: Vector,
 							color: Color, walker: EntityOtreeWalker,
 							flags: { keep_dir_unnormalized?: boolean } = {}) 
@@ -59,6 +62,8 @@ export class Ray {
 			this.dir = dir.normalize();
 		else
 			this.dir = dir.clone();
+
+		++Ray.debug_ray_count;
 	}
 
 	set_color(color: Color) {
@@ -80,22 +85,28 @@ export class Ray {
 	/** Trace and modify the ray along its path */
 	/* TODO: Split this function */
 	trace() {
+		//console.log(`${Ray.debug_ray_count}: called trace()`);
 		const walker = this.walker;
 		walker.direction = this.dir;
 		walker.start_point = (this.refpoint);
-		let tree_node: EntityOtreePos;
+		let tree_node: ReturnType<typeof walker.next>;
 		while ((tree_node = walker.next()) != undefined) {
-			const search_array = tree_node.tree.get(tree_node.octant).value;
+			//console.log(`${Ray.debug_ray_count}: got node id ${tree_node.node.debug_id}`)
+
+			const search_array = tree_node.node.value;
 
 			let collision_info: CollisionInfo;
+			console.log(search_array.set.size);
 			for (let entity of search_array.set) {
 				collision_info = entity.collision_info(this);
 				/* TODO: Probably find a better way for getting rid of the previous collision point */
-				if (collision_info != undefined && !collision_info.point.near_equal(this.refpoint, 1e-6))
+				if (collision_info != undefined && !collision_info.point.near_equal(this.refpoint, 1e-3))
 					break;
 			}
 
 			if (collision_info != undefined) {
+				console.log(`${Ray.debug_ray_count}: found intersect`);
+
 				this.refcount++;
 				// TODO: Convert the intersection point to the surface point for materials
 				collision_info.material.alter_ray(this, collision_info.point);
@@ -119,16 +130,22 @@ export class Ray {
 					return;
 				}
 
-				if (this.refcount >= this.refmax)
+				if (this.refcount >= this.refmax) {
+					console.log(`${Ray.debug_ray_count}: reflection limit`);
+
+					/* If the reflection count was exceeded and no light source was hit, the ray
+					 * has no right to hold any visible color thus its color is set to black. */
+					this.color = COLOR_BLACK;
 					return;
+				}
 			}
 		}
 
-		/* If there is nothing more to intersect, modulate the ray color to ~black.
+		/* If there is nothing more to intersect, modulate it with the sky color
 		 * TODO: Define the Skybox class which will be used in this case
 		 *       to get a specific color.
 		 */
-		this.color = mul_color(this.color, COLOR_SKY_BLACK);
+		this.color = mul_color(this.color, COLOR_SKY);
 	}
 }
 

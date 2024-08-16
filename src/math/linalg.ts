@@ -325,9 +325,13 @@ export class Sphere implements Entity {
 		let b = dist.dot(line.dir);
 		let c = dist.dot(dist) - this.radius*this.radius;
 		let delta = b*b - a*c*4;
+		//console.log(`sph(${this.radius}, ${this.pos.v}), line(${line.start.v}, ${line.dir.v})`);
+		//console.log(`${dist.v}, ${a}, ${b}, ${c}, ${delta}`);
+
 		if (delta < 0)
 			return [];
 
+		//console.log(`sqhere intersected`)
 		let s_delta = Math.sqrt(delta);
 		let tmp1 = -b / (a*2);
 		let tmp2 = s_delta / (a*2);

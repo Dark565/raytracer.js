@@ -66,7 +66,7 @@ export function space_in_space(interior: Space, exterior: Space): boolean {
 	const interior_end = interior.pos.add(interior.size);
 
 	for (let dim = 0; dim < exterior.pos.size; dim++) {
-		if (!(interior.pos.v[dim] >= exterior.pos.v[dim] && interior_end.v[dim] < exterior_end.v[dim]))
+		if (!(interior.pos.v[dim] >= exterior.pos.v[dim] && interior_end.v[dim] <= exterior_end.v[dim]))
 			return false;
 	}
 

@@ -23,9 +23,12 @@ export class OctreeRootError extends Error {}
 * A class abstracting a dynamic octree
 */
 export class Octree<T, ID> {
+	static last_debug_id = 0;
+
 	parent?: Octree<T,ID>;
 	value?: T;
 	id: ID;
+	debug_id: number;
 	private flags: { invalidated: boolean };
 	private nodes: Tuple8<Octant<T,ID>>;
 
@@ -35,6 +38,7 @@ export class Octree<T, ID> {
 		this.flags = { invalidated: false };
 		this.value = value
 		this.nodes = Array(8).fill(undefined) as Tuple8<Octant<T,ID>>;
+		this.debug_id = ++Octree.last_debug_id;
 	}
 
 	static is_at_bounds(n: number): boolean {
@@ -108,32 +112,19 @@ export class Octree<T, ID> {
 		return cur_node;
 	}
 
-	/** Return a positive nest level of this node inside another node */
-	get_relative_level_positive(root: Octree<T, ID>): number {
+	/** Get the tree level of this node relative to the absolute root */
+	get_level(): number {
 		let level = 0;
 		let cur_node: Octree<T, ID> = this;
-		while (cur_node != undefined && cur_node != root) {
+		while ((cur_node = cur_node.parent) != undefined)
 			level++;
-			cur_node = cur_node.parent;
-		}
-		if (cur_node == undefined)
-			throw new OctreeRootError("The specified root tree is not the node's ancestor")
 
 		return level;
 	}
 
-	/** Return a positive or negative nest level of this node inside another node.
-	 * Negative nest means that the node is above the root node. */
+	/** Get the tree level of this node relative to the level of a specified root */
 	get_relative_level(root: Octree<T, ID>): number {
-		try {
-			return this.get_relative_level_positive(root);
-		} catch (e) {
-			if (e instanceof OctreeRootError) {
-				return -root.get_relative_level_positive(this);
-			} else {
-				throw e;
-			}
-		}
+		return this.get_level() - root.get_level();
 	}
 }
 

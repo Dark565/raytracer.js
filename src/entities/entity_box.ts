@@ -64,6 +64,9 @@ export class BoxEntity extends BasicEntity {
 
 		for (let [i, face] of this.face_cache.entries()) {
 			const cross_point = face[1].line_intersection({start: raypos, dir: raydir}, { allow_infinity: true });
+			//console.log(`SquareEntity.collision_info(): cross_point ${cross_point[0].v}`);
+			//console.log(`SquareEntity.collision_info(): cross_point_face_rel ${cross_point[0].sub(face[0]).v}`);
+			//console.log(`SquareEntity.collision_info(): face ${face[0].v} ${size_vec.v}`);
 			if (point_in_space(cross_point[0].sub(face[0]), { pos: face[0], size: size_vec })) {
 				if (closest_point_face[0].sub(raypos).length_sq() < closest_point_face[0].sub(raypos).length_sq()) {
 					closest_point_face[0] = cross_point[0];
@@ -77,6 +80,11 @@ export class BoxEntity extends BasicEntity {
 			}
 		}
 		
+		if (closest_point_face[1] == undefined) {
+			//console.log("SquareEntity.collision_info(): no collision");
+			return null;
+		}
+
 		const normal = this.face_cache[closest_point_face[1]][1].normal;
 		const coll_info = { point: closest_point_face[0], material: this.material, normal: normal };
 		return coll_info;

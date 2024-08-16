@@ -29,18 +29,22 @@ import { Camera, CameraConfig } from '@app/view/camera';
 import { CanvasScreen } from '@app/view/screen_canvas';
 
 const CANVAS_NAME = 'rtcanvas';
-const REFMAX = 32;
+const REFMAX = 3;
 
 function generate_some_aligned_entities(tree: EntityOtree, material: material.Material, n_entities: number) {
-	//const entity_classes = [SphereEntity, BoxEntity];
-	for (let i = 0; i < n_entities; i++) {
-		const level = 3 + Math.ceil(Math.random() * 7);
-		const n_quant = 1 << (level);
-		const size = 1 / n_quant;
-		const [x, y, z] = [0,0,0].map(_ => { return ((Math.random() * n_quant) << 0) * size + size/2 });
-		const entity = new BoxEntity(undefined, material, point(x,y,z), size);
-		add_entity_to_octree(tree, entity, { max_in_depth: 10, max_out_depth: 10 });
-	}
+	const entity_classes = [SphereEntity, BoxEntity];
+	//for (let i = 0; i < n_entities; i++) {
+	//	const level = 1 + Math.ceil(Math.random() * 1);
+	//	const n_quant = 1 << (level);
+	//	const size = 1 / n_quant;
+	//	const [x, y, z] = [0,0,0].map(_ => { return ((Math.random() * n_quant) << 0) * size + size/2 });
+	//	console.log(`${x}, ${y}, ${z}   ${size}`);
+	//	const entity = new SphereEntity(undefined, material, point(x,y,z), size);
+	//	add_entity_to_octree(tree, entity, { max_in_depth: 4, max_out_depth: 4 });
+	//}
+	//add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.5,0.5,0.5), 1), { max_in_depth: 5, max_out_depth: 5 });
+	add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.76,0.5,0.5), 0.5), { max_in_depth: 5, max_out_depth: 5 });
+	add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.77,0.5,0.5), 0.5), { max_in_depth: 5, max_out_depth: 5 });
 }
 
 function main() {
@@ -49,8 +53,8 @@ function main() {
 		throw Error("Cannot access the canvas!!");
 
 	const camera_conf: CameraConfig = {
-		fov_v: Math.PI,
-		fov_h: Math.PI,
+		fov_v: Math.PI/2,
+		fov_h: Math.PI/2,
 		screen_w: canvas.width,
 		screen_h: canvas.height,
 		rot_v: Math.PI/45,
@@ -68,7 +72,7 @@ function main() {
 
 	const gen_material = new SolidMaterial({r: 1.0, g: 0.33, b: 1.0, a: 1.0}, true, material.ResponseType.REFLECTION);
 
-	generate_some_aligned_entities(otree, gen_material, 3);
+	generate_some_aligned_entities(otree, gen_material, 128);
 
 	raytracer.trace_frame();
 }

@@ -6,8 +6,8 @@ import * as space from '@app/octree_space';
 function walker_one_level_test<T>(walker: space.OctreeWalker<T>, pos: linalg.Point, dir: linalg.Vector, expected_crosses: number[]) {
 	walker.start_point = pos;
 	walker.direction = dir;
-	const crosses = Array.from(walker.each_cross({include_undefined: true}));
-	expect(crosses.map(x => x.octant)).toEqual(expected_crosses);
+	const crosses = Array.from(walker.each_cross({include_undefined: true})).slice(0,-1); // slice to filter-out the root
+	expect(crosses.map(x => x.pos.octant)).toEqual(expected_crosses);
 }
 
 test('OctreeWalker sanity', () => {

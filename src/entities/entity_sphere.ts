@@ -23,41 +23,41 @@ import { Material } from '@app/material';
 import * as linalg from '@app/math/linalg';
 
 export class SphereEntity extends BasicEntity {
-	private radius: number;
+	private diameter: number;
 
-	constructor(entity_otree: EntityOtree, material: Material, pos: Point, radius: number) {
+	constructor(entity_otree: EntityOtree, material: Material, pos: Point, diameter: number) {
 		super(entity_otree, material, pos);
-		this.radius = radius;
+		this.diameter = diameter;
 	}
 
-	get_radius(): number {
-		return this.radius;
+	get_diameter(): number {
+		return this.diameter;
 	}
 
-	set_radius(r: number): number {
-		const old_radius = this.radius;
-		this.radius = r;
-		return old_radius;
+	set_diameter(r: number): number {
+		const old_diameter = this.diameter;
+		this.diameter = r;
+		return old_diameter;
 	}
 
 	collision_info(ray: Ray): CollisionInfo|null {
 		const raypos = ray.get_pos();
 		const raydir = ray.get_dir();
-		const la_sphere = new linalg.Sphere(this.pos, this.radius);
+		const la_sphere = new linalg.Sphere(this.pos, this.diameter/2);
 		const cross_point = la_sphere.line_intersection({start: raypos, dir: raydir});
-		if (cross_point == null)
+		if (cross_point.length == 0)
 			return null;
 
-		const normal = cross_point[0].sub(this.pos).scale(1/this.radius);
+		const normal = cross_point[0].sub(this.pos).scale(2/this.diameter);
 		const coll_info = { point: cross_point[0], material: this.material, normal: normal };
 		return coll_info;
 	}
 
 	get_aabb(): [Point, number] {
-		const radius = this.get_radius();
+		const diameter = this.get_diameter();
 		return [
-			this.get_pos().sub(point(radius, radius, radius)),
-			radius * 2
+			this.get_pos().sub(point(diameter, diameter, diameter).scale(0.5)),
+			diameter
 		]
 	}
 }

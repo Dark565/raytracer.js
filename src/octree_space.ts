@@ -38,12 +38,16 @@ export type SpaceOctant<T> = Octant<T,OctreeDim>;
 
 export function node_at_pos<T>(octree: SpaceOctree<T>, pos: Point, flags: { start_from_current?: boolean } = {}): SpaceOctreePos<T>|null {
 	const dim = octree.id;
-	if (pos == undefined || !space.point_in_space(pos, {pos: dim.pos, size: vector(1,1,1).scale(dim.size)}))
+
+	if (pos == undefined)
 		return null;
 
 	let cur_node = octree;
 	if (!flags.start_from_current)
 		cur_node = cur_node.get_root();
+
+	if (!space.point_in_space(pos, {pos: dim.pos, size: vector(1,1,1).scale(dim.size)}))
+		return null;
 
 	let cur_index = 0;
 	let next_dim: OctreeDim = { pos: new Vector(dim.pos), size: dim.size };
@@ -81,15 +85,26 @@ export function new_subtree<T>(tree: SpaceOctree<T>, n: number, flags: { allow_r
 	return subtree;
 }
 
-export function index_within_parent<T>(child: SpaceOctree<T>): number {
+
+/* FIXME: Should return the index depending on the real placement in the parent's children nodes,
+ * not merely by checking geometry. */
+export function index_within_parent<T>(child: SpaceOctree<T>): number|null {
 	const parent = child.parent;
 	if (parent == null)
-		throw Error("the child is orphaned");
+		return null;
 
 	const rel_pos = child.id.pos.sub(parent.id.pos);
 	const ind_vec = rel_pos.scale(2/parent.id.size);
 
 	return (ind_vec.z <<2) + (ind_vec.y <<1) + (ind_vec.x <<0);
+}
+
+/** The output of the OctreeWalker's next() method */
+export interface OctreeWalkerNextOutput<T> {
+	/** The next node; may be undefined if include_undefined was passed in the flags parameter */
+	node?: SpaceOctree<T>;
+	/** The position of the next node within the parent tree; undefined if the next node is the tree root. */
+	pos?: SpaceOctreePos<T>;
 }
 
 /** OctreeWalker cursor state */
@@ -106,6 +121,8 @@ interface OctreeWalkerCursor<T> {
 	order_prepare_fn: (ord: number[]) => number[];
 	/** Information about intersections at the current tree */
 	cross_logic?: { logic: number, order: number[] };
+	/** Marks whether the current tree has been already returned */
+	current_tree_returned: boolean;
 }
 
 /** A linear memory and logarithmic time complexity algorithm for Octree ray-casting */
@@ -117,7 +134,8 @@ export class OctreeWalker<T> {
 		this.tree = tree;
 
 		this.cursor = {
-			order_prepare_fn: OctreeWalker.order_prepare_default
+			order_prepare_fn: OctreeWalker.order_prepare_default,
+			current_tree_returned: false
 		};
 
 		this.start_point = start_point;
@@ -149,7 +167,9 @@ export class OctreeWalker<T> {
 		return this.cursor.direction;
 	}
 
-	next(flags: { include_undefined?: boolean } = {}): SpaceOctreePos<T>|null {
+	/* FIXME: The nodes should be returned before extering them just like the current node is
+	 *        returned before stepping back. */
+	next(flags: { include_undefined?: boolean } = {}): OctreeWalkerNextOutput<T>|undefined {
 		this.prepare_to_walk();
 
 		let next_index: number;
@@ -158,27 +178,41 @@ export class OctreeWalker<T> {
 				continue;
 
 			while ((next_index = this.order_shift_next()) != null) {
-				const child = this.cursor.tree.get(next_index);
+				const tree = this.cursor.tree;
+				const child = tree.get(next_index);
 				if (this.is_crossed(next_index) && (flags.include_undefined || child != undefined)) {
 					if (child instanceof Octree) {
 						this.step_in(child);
-					}
-					else {
+					} else {
 						this.cursor.node = next_index;
 					}
+
 					return {
-						tree:   this.cursor.tree,
-						octant: next_index
+						node:   child,
+						pos: { tree: tree, octant: next_index }
 					};
 				}
 			}
+
+			if (!this.cursor.current_tree_returned) {
+				const tree_pos_idx = index_within_parent(this.cursor.tree);
+				const res_pos = tree_pos_idx != undefined 
+					? { tree: this.cursor.tree.parent, octant: tree_pos_idx } : undefined;
+
+				this.cursor.current_tree_returned = true;
+				return {
+					node: this.cursor.tree,
+					pos: res_pos
+				}
+			}
+
 		} while (this.step_back());
 
 		return null;
 	}
 
 	*each_cross(flags: { include_undefined?: boolean } = {}) {
-		let next_node: SpaceOctreePos<T>;
+		let next_node: OctreeWalkerNextOutput<T>;
 		while ((next_node = this.next(flags)) != null)
 			yield next_node;
 	}
@@ -222,6 +256,7 @@ export class OctreeWalker<T> {
 		this.cursor.tree = tree;
 		this.cursor.node = node;
 		this.cursor.cross_logic = undefined;
+		this.cursor.current_tree_returned = false;
 		this.setup_order();
 		if (flags.exclude_node && this.cursor.cross_logic.order[0] == node) {
 			this.cursor.cross_logic.order.shift();
