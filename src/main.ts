@@ -33,18 +33,20 @@ const REFMAX = 3;
 
 function generate_some_aligned_entities(tree: EntityOtree, material: material.Material, n_entities: number) {
 	const entity_classes = [SphereEntity, BoxEntity];
-	//for (let i = 0; i < n_entities; i++) {
-	//	const level = 1 + Math.ceil(Math.random() * 1);
-	//	const n_quant = 1 << (level);
-	//	const size = 1 / n_quant;
-	//	const [x, y, z] = [0,0,0].map(_ => { return ((Math.random() * n_quant) << 0) * size + size/2 });
-	//	console.log(`${x}, ${y}, ${z}   ${size}`);
-	//	const entity = new SphereEntity(undefined, material, point(x,y,z), size);
-	//	add_entity_to_octree(tree, entity, { max_in_depth: 4, max_out_depth: 4 });
-	//}
+	for (let i = 0; i < n_entities; i++) {
+	const level = 1 + Math.floor(Math.random() * 2);
+	const n_quant = 1 << (level);
+		const size = 1 / n_quant;
+		const [x, y, z] = [0,0,0].map(_ => { return ((Math.random() * n_quant) << 0) * size + size/2 });
+		console.log(`${x}, ${y}, ${z}   ${size}`);
+		const entity = new SphereEntity(undefined, material, point(x,y,z), size);
+		entity.set_octree(tree);
+		tree.value.set.add(entity);
+		//add_entity_to_octree(tree, entity, { max_in_depth: 4, max_out_depth: 4 });
+	}
 	//add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.5,0.5,0.5), 1), { max_in_depth: 5, max_out_depth: 5 });
-	add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.76,0.5,0.5), 0.5), { max_in_depth: 5, max_out_depth: 5 });
-	add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.77,0.5,0.5), 0.5), { max_in_depth: 5, max_out_depth: 5 });
+	//add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.76,0.5,0.5), 0.5), { max_in_depth: 5, max_out_depth: 5 });
+	//add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.77,0.5,0.5), 0.5), { max_in_depth: 5, max_out_depth: 5 });
 }
 
 function main() {
@@ -65,7 +67,7 @@ function main() {
 	const canvas_ctx = canvas.getContext("2d");
 
 	const screen = new CanvasScreen(canvas_ctx, { buffer_pixels: true });
-	const camera = new Camera(camera_conf);
+	const camera = new Camera(camera_conf, 0, Math.PI/180 * 30);
 
 	const otree = new_entity_octree({pos: point(0,0,0), size: 1}, undefined);
 	const raytracer = new Raytracer({refmax: REFMAX}, point(0.5,0.5,0.5), otree, camera, screen);

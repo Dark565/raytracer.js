@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Vector, Point } from '@app/math/linalg';
+import { Vector, Point, vector } from '@app/math/linalg';
 import { clamp } from '@app/math/mathutils';
 import { EntitySet, new_entity_octree_walker, EntityOtree, EntityOtreeWalker, EntityOtreePos } from '@app/octree_entity';
 import { Entity, CollisionInfo } from '@app/entity';
@@ -22,15 +22,18 @@ import { Color, color, clone_color, mul_color } from '@app/physics/color';
 import * as material from '@app/material';
 import { Camera } from '@app/view/camera';
 import { Screen } from '@app/view/screen';
+import * as debug from '@app/debug/object_hacks';
 
 export interface RaytracerConfig {
 	/** Global maximum count of collisions for all rays */
 	refmax: number;
 };
 
-const COLOR_SKY   = color(1e-1, 1e-1, 0.6);
+const COLOR_SKY   = color(1e-1,1e-1,1e-1);
 const COLOR_BLACK = color(0,0,0);
 const COLOR_WHITE = color(1,1,1);
+
+const VECTOR_ORTHO = vector(0,1);
 
 /* Ray description class */
 export class Ray {
@@ -90,22 +93,28 @@ export class Ray {
 		walker.direction = this.dir;
 		walker.start_point = (this.refpoint);
 		let tree_node: ReturnType<typeof walker.next>;
+		let last_entity: Entity = undefined;
 		while ((tree_node = walker.next()) != undefined) {
 			//console.log(`${Ray.debug_ray_count}: got node id ${tree_node.node.debug_id}`)
 
 			const search_array = tree_node.node.value;
 
 			let collision_info: CollisionInfo;
-			console.log(search_array.set.size);
-			for (let entity of search_array.set) {
+			let entity: Entity;
+			for (entity of search_array.set) {
+				if (entity == last_entity) {
+					continue;
+				}
+
 				collision_info = entity.collision_info(this);
 				/* TODO: Probably find a better way for getting rid of the previous collision point */
-				if (collision_info != undefined && !collision_info.point.near_equal(this.refpoint, 1e-3))
+				if (collision_info != undefined /*&& !collision_info.point.near_equal(this.refpoint, 1e-3)*/)
 					break;
 			}
 
 			if (collision_info != undefined) {
-				console.log(`${Ray.debug_ray_count}: found intersect`);
+				console.log(`${debug.unique_object_id(this)}: found intersect: ${collision_info.point.v}, entity: ${debug.unique_object_id(entity)}, raydir: ${this.dir.v}, raypos: ${this.refpoint.v}, normal: ${collision_info.normal.v}`);
+				last_entity = entity;
 
 				this.refcount++;
 				// TODO: Convert the intersection point to the surface point for materials
@@ -121,7 +130,8 @@ export class Ray {
 						return;
 					}
 
-					this.dir = this.dir.add(collision_info.normal.scale(2));
+					//this.dir = this.dir.rotate_axis(collision_info.normal, VECTOR_ORTHO).negate();
+					this.dir = this.dir.reflection(collision_info.normal);
 					walker.direction = this.dir;
 					break;
 				case material.ResponseType.TRANSMISSION:
@@ -131,7 +141,7 @@ export class Ray {
 				}
 
 				if (this.refcount >= this.refmax) {
-					console.log(`${Ray.debug_ray_count}: reflection limit`);
+					console.log(`${debug.unique_object_id(this)}: reflection limit`);
 
 					/* If the reflection count was exceeded and no light source was hit, the ray
 					 * has no right to hold any visible color thus its color is set to black. */

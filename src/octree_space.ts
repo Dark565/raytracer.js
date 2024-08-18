@@ -89,6 +89,9 @@ export function new_subtree<T>(tree: SpaceOctree<T>, n: number, flags: { allow_r
 /* FIXME: Should return the index depending on the real placement in the parent's children nodes,
  * not merely by checking geometry. */
 export function index_within_parent<T>(child: SpaceOctree<T>): number|null {
+	if (child.index_within_parent != undefined)
+		return child.index_within_parent;
+
 	const parent = child.parent;
 	if (parent == null)
 		return null;
@@ -124,6 +127,8 @@ interface OctreeWalkerCursor<T> {
 	/** Marks whether the current tree has been already returned */
 	current_tree_returned: boolean;
 }
+
+/* TODO: Implement cross logic stack for the walker
 
 /** A linear memory and logarithmic time complexity algorithm for Octree ray-casting */
 export class OctreeWalker<T> {

@@ -23,9 +23,8 @@ export class OctreeRootError extends Error {}
 * A class abstracting a dynamic octree
 */
 export class Octree<T, ID> {
-	static last_debug_id = 0;
-
 	parent?: Octree<T,ID>;
+	index_within_parent?: number; // used for optimization
 	value?: T;
 	id: ID;
 	debug_id: number;
@@ -38,7 +37,6 @@ export class Octree<T, ID> {
 		this.flags = { invalidated: false };
 		this.value = value
 		this.nodes = Array(8).fill(undefined) as Tuple8<Octant<T,ID>>;
-		this.debug_id = ++Octree.last_debug_id;
 	}
 
 	static is_at_bounds(n: number): boolean {

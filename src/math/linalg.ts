@@ -217,6 +217,17 @@ export class Vector {
 		return r_v;
 	}
 
+	/** Get reflection direction of this vector with respect to a specific normal.
+	 * The normal is **assummed to be normalized**.
+	 * The effect is the same as calling rotate_axis with [1,0] (i.e 90 degree) half_angle, but
+	 * this function is optimized specifically for reflection and additionally works for any vector size. */
+	reflection(normal: Vector): Vector {
+		this.assert_compatibility(normal);
+
+		const norm_scale = -this.dot(normal);
+		return this.add(normal.scale(norm_scale * 2));
+	}
+
 	/** Get the vector orthogonal to the 2D vector */
 	ortho() {
 		this.assert_size(2);
