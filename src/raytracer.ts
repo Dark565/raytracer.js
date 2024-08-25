@@ -29,7 +29,8 @@ export interface RaytracerConfig {
 	refmax: number;
 };
 
-const COLOR_SKY   = color(1e-1,1e-1,1e-1);
+//const COLOR_SKY   = color(1e-1,1e-1,1e-1);
+const COLOR_SKY = color(1,1,1);
 const COLOR_BLACK = color(0,0,0);
 const COLOR_WHITE = color(1,1,1);
 
@@ -49,6 +50,8 @@ export class Ray {
 	private color: Color;
 	/** The OctreeWalker assigned to the ray */
 	private walker: EntityOtreeWalker;
+	/** Path distance used for the inverse square law calculation */
+	private path_distance: number;
 
 	private static debug_ray_count = 0;
 
@@ -61,6 +64,7 @@ export class Ray {
 		this.refpoint = start_point.clone();
 		this.color = clone_color(color);
 		this.walker = walker;
+		this.path_distance = 0;
 		if (!flags.keep_dir_unnormalized)
 			this.dir = dir.normalize();
 		else
@@ -95,7 +99,7 @@ export class Ray {
 		let tree_node: ReturnType<typeof walker.next>;
 		let last_entity: Entity = undefined;
 		while ((tree_node = walker.next()) != undefined) {
-			//console.log(`${Ray.debug_ray_count}: got node id ${tree_node.node.debug_id}`)
+			//console.log(`${Ray.debug_ray_count}: got node id ${debug.unique_object_id(tree_node.node)}, walker's stack size: ${walker.info_stack.length}`);
 
 			const search_array = tree_node.node.value;
 
@@ -113,12 +117,13 @@ export class Ray {
 			}
 
 			if (collision_info != undefined) {
-				console.log(`${debug.unique_object_id(this)}: found intersect: ${collision_info.point.v}, entity: ${debug.unique_object_id(entity)}, raydir: ${this.dir.v}, raypos: ${this.refpoint.v}, normal: ${collision_info.normal.v}`);
+				//console.log(`${debug.unique_object_id(this)}: found intersect: ${collision_info.point.v}, entity: ${debug.unique_object_id(entity)}, raydir: ${this.dir.v}, raypos: ${this.refpoint.v}, normal: ${collision_info.normal.v}`);
 				last_entity = entity;
 
 				this.refcount++;
 				// TODO: Convert the intersection point to the surface point for materials
 				collision_info.material.alter_ray(this, collision_info.point);
+				this.path_distance += collision_info.point.sub(this.refpoint).length();
 				this.refpoint = collision_info.point;
 				walker.start_point = this.refpoint;
 
@@ -141,7 +146,7 @@ export class Ray {
 				}
 
 				if (this.refcount >= this.refmax) {
-					console.log(`${debug.unique_object_id(this)}: reflection limit`);
+					//console.log(`${debug.unique_object_id(this)}: reflection limit`);
 
 					/* If the reflection count was exceeded and no light source was hit, the ray
 					 * has no right to hold any visible color thus its color is set to black. */
@@ -150,6 +155,10 @@ export class Ray {
 				}
 			}
 		}
+
+		/* Attenuate the ray's intensity due to the inverse square distance */
+		const isl_coef = 1.0 / (1 + this.path_distance)**2;
+		this.color = mul_color(this.color, { r: isl_coef, g: isl_coef, b: isl_coef, a: 1.0 });
 
 		/* If there is nothing more to intersect, modulate it with the sky color
 		 * TODO: Define the Skybox class which will be used in this case
@@ -163,35 +172,27 @@ export class Ray {
 export class Raytracer {
 	private walker: EntityOtreeWalker;
 	private config: RaytracerConfig;
-	private pos: Point;
-	private camera?: Camera;
-	private screen?: Screen;
+	private camera: Camera;
+	private screen: Screen;
 
-	constructor(config: RaytracerConfig, pos: Point, otree: EntityOtree, camera?: Camera, screen?: Screen) {
+	constructor(config: RaytracerConfig, otree: EntityOtree, camera: Camera, screen: Screen) {
 		this.camera = camera;
 		this.screen = screen;
-		this.pos = pos.clone();
 		this.walker = new_entity_octree_walker(otree);
 		this.config = Object.assign({}, config);
 	}
 
-	set_camera(camera?: Camera) {
+	set_camera(camera: Camera) {
 		this.camera = camera;
 	}
 
-	set_screen(screen?: Screen) {
+	set_screen(screen: Screen) {
 		this.screen = screen;
 	}
 
 	trace_frame() {
-		if (this.camera == undefined)
-			throw Error("this.camera must be defined");
-
-		if (this.screen == undefined)
-			throw Error("this.screen must be defined");
-
 		for (let campx of this.camera.get_dir_for_each_pixel()) {
-			const ray = new Ray(this.config.refmax, this.pos, campx.dir, COLOR_WHITE,
+			const ray = new Ray(this.config.refmax, this.camera.get_pos(), campx.dir, COLOR_WHITE,
 													this.walker, { keep_dir_unnormalized: true });
 
 			ray.trace();
