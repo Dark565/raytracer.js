@@ -16,7 +16,7 @@
 
 import { EntitySet, EntityOtree } from '@app/octree_entity';
 import { Ray } from '@app/raytracer';
-import { Point, point } from '@app/math/linalg';
+import { Point, point, IntersectionDirection } from '@app/math/linalg';
 import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
 import { Material } from '@app/material';
@@ -24,27 +24,38 @@ import * as linalg from '@app/math/linalg';
 
 export class SphereEntity extends BasicEntity {
 	private diameter: number;
+	private sphere_math: linalg.Sphere;
 
 	constructor(entity_otree: EntityOtree, material: Material, pos: Point, diameter: number) {
 		super(entity_otree, material, pos);
 		this.diameter = diameter;
+		this.sphere_math = new linalg.Sphere(this.pos, this.diameter/2);
 	}
 
 	get_diameter(): number {
 		return this.diameter;
 	}
 
-	set_diameter(r: number): number {
+	set_diameter(d: number): number {
 		const old_diameter = this.diameter;
-		this.diameter = r;
+		this.diameter = d;
+		this.sphere_math.radius = d/2;
 		return old_diameter;
+	}
+
+	set_position(p: Point): Point {
+		const old_pos = this.pos;
+		this.pos = p;
+		this.sphere_math.pos = p;
+		return old_pos;
 	}
 
 	collision_info(ray: Ray): CollisionInfo|null {
 		const raypos = ray.get_pos();
 		const raydir = ray.get_dir();
-		const la_sphere = new linalg.Sphere(this.pos, this.diameter/2);
-		const cross_point = la_sphere.line_intersection({start: raypos, dir: raydir});
+		const cross_point = this.sphere_math.line_intersection({start: raypos, dir: raydir},
+                                                    { intersection_direction: IntersectionDirection.FORWARD });
+
 		if (cross_point.length == 0)
 			return null;
 

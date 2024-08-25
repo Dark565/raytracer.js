@@ -18,7 +18,7 @@
 
 import { Octree, Octant, OctreePos } from '@app/octree';
 import { NODE_ORDER_MAP, NODE_ORDERS } from '@app/octree_const';
-import { vector, Vector, Point, Plane, Line, } from '@app/math/linalg';
+import { vector, Vector, Point, Plane, Line, IntersectionDirection } from '@app/math/linalg';
 import * as space from '@app/space';
 
 /** The geometric dimensions of the octree.
@@ -125,7 +125,17 @@ interface OctreeWalkerCursor<T> {
 	/** Information about intersections at the current tree */
 	cross_logic?: { logic: number, order: number[] };
 	/** Marks whether the current tree has been already returned */
-	current_tree_returned: boolean;
+	was_returned: boolean;
+}
+
+/** The entry of the Walker's NodeInfo stack; the stack whose head stores information about the most recently entered node */
+interface OctreeWalkerNodeInfo<T> {
+	/** The node */
+	tree: SpaceOctree<T>;
+	/** Information about intersections at the node */
+	cross_logic: { logic: number, order: number[] };
+	/** Marks whether the node has been already returned by next() */
+	was_returned: boolean;
 }
 
 /* TODO: Implement cross logic stack for the walker
@@ -134,13 +144,15 @@ interface OctreeWalkerCursor<T> {
 export class OctreeWalker<T> {
 	private tree: SpaceOctree<T>;
 	private cursor: OctreeWalkerCursor<T>;
+	private info_stack: OctreeWalkerNodeInfo<T>[];
 
 	constructor(tree: SpaceOctree<T>, start_point?: Point, direction?: Vector) {
 		this.tree = tree;
+		this.info_stack = [];
 
 		this.cursor = {
 			order_prepare_fn: OctreeWalker.order_prepare_default,
-			current_tree_returned: false
+			was_returned: false
 		};
 
 		this.start_point = start_point;
@@ -172,8 +184,6 @@ export class OctreeWalker<T> {
 		return this.cursor.direction;
 	}
 
-	/* FIXME: The nodes should be returned before extering them just like the current node is
-	 *        returned before stepping back. */
 	next(flags: { include_undefined?: boolean } = {}): OctreeWalkerNextOutput<T>|undefined {
 		this.prepare_to_walk();
 
@@ -199,12 +209,12 @@ export class OctreeWalker<T> {
 				}
 			}
 
-			if (!this.cursor.current_tree_returned) {
+			if (!this.cursor.was_returned) {
 				const tree_pos_idx = index_within_parent(this.cursor.tree);
 				const res_pos = tree_pos_idx != undefined 
 					? { tree: this.cursor.tree.parent, octant: tree_pos_idx } : undefined;
 
-				this.cursor.current_tree_returned = true;
+				this.cursor.was_returned = true;
 				return {
 					node: this.cursor.tree,
 					pos: res_pos
@@ -224,7 +234,7 @@ export class OctreeWalker<T> {
 
 	/** Sets the current walker position to the subtree and node covering the specified point.
 	 *  If the point is out of the tree, the posision is set to the outermost tree and undefined node.
-	 *  This function automatically deprecates the cursor logic. */
+	 *  This function automatically deprecates the cursor logic and the stack. */
 	go_to_point(point: Point): boolean {
 		let pos_node: SpaceOctreePos<T> = undefined;
 		/* Try the tree at the cursor first to optimize traversal out */
@@ -237,6 +247,10 @@ export class OctreeWalker<T> {
 		}
 
 		this.deprecate_cursor_logic();
+
+		this.cursor.was_returned = false;
+		this.deprecate_stack();
+
 		if (pos_node == undefined) {
 			this.cursor.tree = this.tree;
 			this.cursor.node = undefined;
@@ -261,12 +275,40 @@ export class OctreeWalker<T> {
 		this.cursor.tree = tree;
 		this.cursor.node = node;
 		this.cursor.cross_logic = undefined;
-		this.cursor.current_tree_returned = false;
 		this.setup_order();
 		if (flags.exclude_node && this.cursor.cross_logic.order[0] == node) {
 			this.cursor.cross_logic.order.shift();
 			this.cursor.node = this.cursor.cross_logic.order[0];
 		}
+	}
+
+	private pop_info_stack(flags: { exclude_node?: boolean } = {}): boolean {
+		const info = this.info_stack.pop();
+		if (info == undefined)
+			return false;
+
+		this.cursor.tree = info.tree;
+		this.cursor.node = info.cross_logic.order[0];
+		this.cursor.cross_logic = info.cross_logic;
+		if (flags.exclude_node) {
+			this.cursor.cross_logic.order.shift();
+			this.cursor.node = this.cursor.cross_logic.order[0];
+		}
+	}
+
+	/** Pack and push current cross_logic on the NodeInfo stack */
+	private push_info_stack() {
+		const entry: OctreeWalkerNodeInfo<T> = {
+			tree: this.cursor.tree,
+			cross_logic: this.cursor.cross_logic,
+			was_returned: this.cursor.was_returned
+		};
+
+		this.info_stack.push(entry);
+	}
+
+	private deprecate_stack() {
+		this.info_stack = []
 	}
 
 	private deprecate_cursor_logic() {
@@ -283,12 +325,10 @@ export class OctreeWalker<T> {
 		this.validate_cursor_state();
 	}
 
+	private static PLANE_PAIRS = [[1,2],[0,2],[0,1]];
+
 	/* FIXME: Kinda working, but still have to implement a proper handling of the middle cross situation */
 	private setup_order() {
-		console.assert(this.cursor.tree != undefined);
-		console.assert(this.cursor.start_point != undefined);
-		console.assert(this.cursor.direction != undefined);
-
 		const tree = this.cursor.tree;
 		const half_size = tree.id.size/2;
 		const mid_point = tree.id.pos.add(vector(half_size, half_size, half_size));
@@ -296,10 +336,10 @@ export class OctreeWalker<T> {
 
 		let logic_vec = 0;
 
-		[[1,2],[0,2],[0,1]].forEach((x,i) => {
+		for (const [i,x] of OctreeWalker.PLANE_PAIRS.entries()) {
 			const axis_bit = 1<<i;
 			const plane = new Plane(vector(axis_bit&1, axis_bit&2, axis_bit&4), mid_point, { assume_normalized: true });
-			const cross_point = plane.line_intersection(line, { allow_infinity: true });
+			const cross_point = plane.line_intersection(line, { allow_infinity: true, intersection_direction: IntersectionDirection.BOTH });
 			/* console.log(`line.dir.norm(): ${line.dir.normalize().v}`); */
 			//console.log(`cross_point: ${cross_point[0].v}`);
 			//console.log(`mid_point: ${mid_point.v}`);
@@ -318,7 +358,7 @@ export class OctreeWalker<T> {
 			logic_vec |= Number(a1_of || a2_of) << (6 + i);
 			/* console.log((Number(a1_ae_middle) | Number(a2_ae_middle)<<1).toString(2).padStart(2,'0')); */
 			/* console.log(logic_vec.toString(2).padStart(9, '0')); */
-		});
+		};
 
 		const order_index = Number((NODE_ORDER_MAP >> BigInt(logic_vec << 1)) & BigInt(0x3));
 		let order_sequence = this.cursor.order_prepare_fn(NODE_ORDERS[order_index].slice());
@@ -379,6 +419,9 @@ export class OctreeWalker<T> {
 	private step_back(): SpaceOctree<T>|null {
 		let parent: SpaceOctree<T>;
 
+		if (this.pop_info_stack({ exclude_node: true }))
+			return this.cursor.tree;
+
 		if ((parent = this.cursor.tree.parent) != null) {
 			const cur_tree_index = index_within_parent(this.cursor.tree);
 			this.modify_cursor_logic(parent, cur_tree_index, { exclude_node: true });
@@ -388,6 +431,8 @@ export class OctreeWalker<T> {
 
 	/* Step inside a subtree. */
 	private step_in(subtree: SpaceOctree<T>) {
+		this.push_info_stack();
 		this.modify_cursor_logic(subtree, undefined);
+		this.cursor.was_returned = true;
 	}
 }

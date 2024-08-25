@@ -23,19 +23,20 @@ export class VectorError extends Error {}
 */
 export class Vector {
 	v: number[];
-	size: number;
+	//size: number;
 
-	constructor(x?: number[]|Vector) {
+	constructor(x: number|number[]|Vector, flags: { no_copy?: boolean, no_init?: boolean } = {}) {
 		if (x instanceof Array) {
-			this.v = x.slice(0);
+			this.v = flags.no_copy ? x : x.slice(0);
 		} else if (x instanceof Vector) {
 			this.copy_from(x);
-			return;
-		} else {
-			this.v = [0,0,0];
+		} else if (Number.isInteger(x)) {
+			this.v = flags.no_init ? Array(x) : Array(x).fill(0);
 		}
+	}
 
-		this.size = this.v.length;
+	static new_empty_sized(dim: number) {
+		return new Vector(dim, { no_init: true });
 	}
 
 	*[Symbol.iterator]() {
@@ -59,9 +60,12 @@ export class Vector {
 		return this.z[3];
 	}
 
+	get size() {
+		return this.v.length;
+	}
+
 	copy_from(x: Vector) {
 		this.v = x.v.slice(0);
-		this.size = x.size;
 	}
 
 	clone() {
@@ -91,7 +95,7 @@ export class Vector {
 		this.assert_size(3);
 		v2.assert_size(3);
 
-		let res = new Vector;
+		const res = Vector.new_empty_sized(this.size);
 		res.v[0] = this.v[1]*v2.v[2] - this.v[2]*v2.v[1];
 		res.v[1] = this.v[2]*v2.v[0] - this.v[0]*v2.v[2];
 		res.v[2] = this.v[0]*v2.v[1] - this.v[1]*v2.v[0];
@@ -100,41 +104,45 @@ export class Vector {
 
 	hadamard(v2: Vector) {
 		this.assert_compatibility(v2);
-		let res = new Vector;
+		const res = Vector.new_empty_sized(this.size);
 		for (let i=0; i < this.size; i++)
 			res.v[i] = this.v[i] * v2.v[i];
 	}
 
 	add(v2: Vector) {
 		this.assert_compatibility(v2);
-		let res = this.clone();
+		//let res = this.clone();
+		const res = Vector.new_empty_sized(this.size);
 		for (let i=0; i < this.size; i++) {
-			res.v[i] += v2.v[i];
+			res.v[i] = this.v[i] + v2.v[i];
 		}
 		return res;
 	}
 
 	sub(v2: Vector) {
 		this.assert_compatibility(v2);
-		let res = this.clone();
+		//let res = this.clone();
+		const res = Vector.new_empty_sized(this.size);
 		for (let i=0; i < this.size; i++) {
-			res.v[i] -= v2.v[i];
+			res.v[i] = this.v[i] - v2.v[i];
 		}
 		return res;
 	}
 
 	scale(scalar: number): Vector {
-		let res = this.clone();
+		//let res = this.clone();
+		const res = Vector.new_empty_sized(this.size);
 		for (let i=0; i < res.size; ++i) {
-			res.v[i] *= scalar;
+			res.v[i] = this.v[i] * scalar;
 		}
 		return res;
 	}
 
 	negate(): Vector {
-		let res = this.clone();
+		//let res = this.clone();
+		const res = Vector.new_empty_sized(this.size);
 		for (let i=0; i < res.size; ++i) {
-			res.v[i] = -res.v[i];
+			res.v[i] = -this.v[i];
 		}
 		return res;
 	}
@@ -143,13 +151,60 @@ export class Vector {
 		return this.dot(this);
 	}
 
+	length() {
+		return Math.sqrt(this.length_sq());
+	}
+
+	/** Get the angle between a 2D vector and the X axis in radians */
+	angle() {
+		this.assert_size(2);
+		return Math.atan2(this.y, this.x);
+	}
+
+	assign(v2: Vector) {
+		for (let i=0; i < this.size; i++) {
+			this.v[i] = v2.v[i];
+		}
+		return this;
+	}
+
+	add_self(v2: Vector) {
+		this.assert_compatibility(v2);
+		for (let i=0; i < this.size; i++) {
+			this.v[i] += v2.v[i];
+		}
+		return this;
+	}
+
+	sub_self(v2: Vector) {
+		this.assert_compatibility(v2);
+		for (let i=0; i < this.size; i++) {
+			this.v[i] -= v2.v[i];
+		}
+		return this;
+	}
+
+	scale_self(scalar: number) {
+		for (let i=0; i < this.size; i++) {
+			this.v[i] *= scalar;
+		}
+		return this;
+	}
+
+
 	normalize() {
-		const len = Math.sqrt(this.length_sq());
-		let res = this.clone();
+		const len = this.length();
+		//let res = this.clone();
+		const res = Vector.new_empty_sized(this.size);
 		for (let i=0; i < this.size; i++)
-			res.v[i] /= len;
+			res.v[i] = this.v[i] / len;
 
 		return res;
+	}
+
+	normalize_self() {
+		const len = this.length();
+		return this.scale_self(1.0/len);
 	}
 
 	assert_size(n: number) {
@@ -162,7 +217,7 @@ export class Vector {
 	 */
 	extend(n: number, fields?: number[]): Vector {
 		if (n < this.size)
-			throw new VectorError("Requested less dimensions that the vector currently operates on");
+			throw new VectorError("The requested vector size is smaller than the current size of the vector");
 
 		const new_fields = fields ?? Array(n - this.size).fill(0);
 
@@ -170,6 +225,14 @@ export class Vector {
 			throw new VectorError("Not enough elements passed");
 
 		return vector(...this.v, ...new_fields);
+	}
+
+	/** Return a copy of the vector with only the first n fields and remove all further */
+	reduce(n: number) {
+		if (n > this.size - 1)
+			throw new VectorError("The requested vector size exceeds the vector's total size");
+
+		return new Vector(this.v.slice(0,n), { no_copy: true });
 	}
 
 	/** Rotate the 2d vector along the xy plane.
@@ -228,7 +291,7 @@ export class Vector {
 		return this.add(normal.scale(norm_scale * 2));
 	}
 
-	/** Get the vector orthogonal to the 2D vector */
+	/** Get the vector orthogonal to the 2D vector clockwise */
 	ortho() {
 		this.assert_size(2);
 		return vector(-this.y, this.x);
@@ -263,7 +326,7 @@ export class Vector {
 }
 
 export function vector(...numbers: number[]): Vector {
-	return new Vector(numbers);
+	return new Vector(numbers, { no_copy: true });
 }
 
 
@@ -292,11 +355,20 @@ export function rotate_vectors(base_x: Vector, base_y: Vector, rot_vec: Vector):
 	];
 }
 
+export enum IntersectionDirection {
+	BOTH,
+	FORWARD,
+	BACKWAR,
+}
+
 export interface IntersectionFlags {
-	/** This flag instructs an intersection function to be less strict on getting rid of infinity.
+	/** This flag instructs an intersection function to not get rid of infinity.
 	 * For example, with this flag, line_intersection() function on Plane returns a point with
 	 * Infinity or -Infinity for its fields if a line is parallel to a plane. */
 	allow_infinity?: boolean
+
+	/** The allowed direction of intersection point. */
+	intersection_direction?: IntersectionDirection
 }
 
 export interface Entity {
@@ -318,36 +390,95 @@ export class Plane implements Entity {
 
 		let off_dist = this.pos.sub(line.start);
 		let ratio = off_dist.dot(this.normal) / denom;
+
+		switch (flags.intersection_direction ?? IntersectionDirection.BOTH) {
+			case IntersectionDirection.BOTH:
+				break;
+			case IntersectionDirection.FORWARD:
+				if (ratio < 0.0)
+					return [];
+			default: // BACKWARD
+				if (ratio > 0.0)
+					return [];
+			}
+
 		return [line.start.add(line.dir.scale(ratio))];
 	}
 }
 
 export class Sphere implements Entity {
-	radius: number;
-	pos: Vector;
+	/* cache */
+	private _dot_pp: number;
+	private _radius_sq: number;
+
+	private _radius: number;
+	private _pos: Vector;
 	constructor(pos: Vector, radius: number) {
+		this._pos = pos;
+		this._radius = radius;
+
+		this.update_cache();
+	}
+
+	private update_cache() {
+		this._dot_pp    = this._pos.dot(this._pos);
+		this._radius_sq = this._radius * this._radius;
+	}
+
+	set pos(pos: Vector) {
 		this.pos = pos;
-		this.radius = radius;
+		this.update_cache();
 	}
 
-	line_intersection(line: Line): Vector[] {
-		let dist = line.start.sub(this.pos);
-		let a = line.dir.dot(line.dir);
-		let b = dist.dot(line.dir);
-		let c = dist.dot(dist) - this.radius*this.radius;
-		let delta = b*b - a*c*4;
-		//console.log(`sph(${this.radius}, ${this.pos.v}), line(${line.start.v}, ${line.dir.v})`);
-		//console.log(`${dist.v}, ${a}, ${b}, ${c}, ${delta}`);
-
-		if (delta < 0)
-			return [];
-
-		//console.log(`sqhere intersected`)
-		let s_delta = Math.sqrt(delta);
-		let tmp1 = -b / (a*2);
-		let tmp2 = s_delta / (a*2);
-		let t1 = tmp1 - tmp2;
-		let t2 = tmp1 + tmp2;
-		return [line.start.add(line.dir.scale(t1)), line.start.add(line.dir.scale(t2))];
+	get pos() {
+		return this._pos;
 	}
+
+	set radius(radius: number) {
+		this._radius = radius;
+		this.update_cache();
+	}
+
+	get radius() {
+		return this._radius;
+	}
+
+ line_intersection(line: Line, flags: IntersectionFlags = {}): Vector[] {
+	const sp_dir = flags.intersection_direction ?? IntersectionDirection.BOTH;
+	const dist = line.start.sub(this.pos);
+	const a = line.dir.dot(line.dir);
+	const b = dist.dot(line.dir)*2;
+	const c = line.start.dot(line.start) + this._dot_pp
+	         - line.start.dot(this.pos)*2 - this._radius_sq;
+
+	const delta = b*b - a*c*4;
+	if (delta < 0)
+		return [];
+
+	//console.log(`sqhere intersected`)
+	let s_delta = Math.sqrt(delta);
+	let tmp1 = -b / (a*2);
+	let tmp2 = s_delta / (a*2);
+	let t1 = tmp1 - tmp2;
+	let t2 = tmp1 + tmp2;
+
+	const p1 = line.start.add(line.dir.scale(t1));
+	const p2 = line.start.add(line.dir.scale(t2));
+
+	// -- aggresive optimization by using LUT
+	
+	const a_p1_p2 = [p1,p2];
+	const a_p2_p1 = [p2,p1];
+	const a_p2 = [p2];
+
+	const res_matrix = [
+		  a_p1_p2, a_p1_p2, a_p1_p2, a_p1_p2,
+		  [],      [],      a_p2,    a_p1_p2,
+		  a_p2_p1, [],      a_p1_p2, []
+	]
+
+	const lut_col_idx = (Number(t2 >= 0) << 1) | Number(t1 >= 0);
+	return res_matrix[sp_dir * 4 + lut_col_idx];
+ }
 }
+
