@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Vector, vector, rotate_vectors } from '@app/math/linalg';
+import { Point, Vector, vector, rotate_vectors } from '@app/math/linalg';
 
 export interface CameraPixel {
 	x: number;
@@ -45,6 +45,7 @@ export interface CameraConfig {
 
 export class Camera {
 	private conf: CameraConfig;
+	private pos: Point;
 	private norm_fr: Vector;
 	private norm_lf: Vector;
 	private norm_up: Vector;
@@ -53,8 +54,9 @@ export class Camera {
 	private rot_scan_h_v: Vector;
 	private rot_scan_v_v: Vector;
 
-	constructor(conf: CameraConfig, init_v_angle?: number, init_h_angle?: number) {
+	constructor(conf: CameraConfig, init_pos: Point, init_v_angle?: number, init_h_angle?: number) {
 		this.conf = Object.assign({}, conf);
+		this.pos = init_pos.clone();
 		this.norm_fr = vector(1,0,0);
 		this.norm_lf = vector(0,1,0);
 		this.norm_up = vector(0,0,1);
@@ -103,7 +105,8 @@ export class Camera {
 	/** Rotate the camera vertically (with conf.rot_v angle) by n steps */
 	rotate_v_step(n: number) {
 		const rot_vec = n >= 0 ? this.rot_h_v : vector(this.rot_h_v.x, -this.rot_h_v.y);
-		for (let i = 0; i < n; i++) {
+		const steps = Math.abs(n);
+		for (let i = 0; i < steps; i++) {
 			if (!this.rotate_v_v(rot_vec))
 				break;
 		}
@@ -144,7 +147,49 @@ export class Camera {
 		this.norm_up = vector(0,0,1);
 	}
 
-	/** Get the vector normal to the camera's center pixel */
+	set_pos(p: Point) {
+		this.pos.assign(p);
+	}
+
+	get_pos() {
+		return this.pos;
+	}
+
+	move(move_vec: Vector) {
+		this.pos.add_self(move_vec);
+	}
+
+	/** Move forward in the XY plane */
+	move_xy_forward(scale = 1) {
+		const fr_vec = this.get_xy_front_vector();
+		this.move(fr_vec.scale(scale).extend(3));
+	}
+
+	/** Move backward in the XY plane */
+	move_xy_backward(scale = 1) {
+		const fr_vec = this.get_xy_front_vector();
+		this.move(fr_vec.scale(-scale).extend(3));
+	}
+
+	/** Move left in the XY plane */
+	move_xy_left(scale = 1) {
+		const lf_vec = this.get_xy_front_vector().ortho();
+		this.move(lf_vec.scale(-scale).extend(3));
+	}
+
+	/** Move right in the XY plane */
+	move_xy_right(scale = 1) {
+		const lf_vec = this.get_xy_front_vector().ortho();
+		this.move(lf_vec.scale(scale).extend(3));
+	}
+
+	/** Get a normalized (or unnormalized) vector pointing forward from the camera in the XY plane. */
+	get_xy_front_vector(flags: { unnormalized?: true } = {}) {
+		const res = this.norm_fr.reduce(2);
+		return flags.unnormalized ? res : res.normalize();
+	}
+
+	/** Get the vector pointing forward from the camera */
 	get_front_vector() {
 		return this.norm_fr.clone();
 	}
@@ -157,7 +202,7 @@ export class Camera {
 	/** Yield the direction vector for each pixel on the screen. */
 	*get_dir_for_each_pixel(): Generator<CameraPixel> {
 		const conf = this.conf;
-		const camera = this; // to avoid a bug? in typescript transpillers that causes
+		const camera = this; // to avoid a bug? that causes
 		                     // 'this' to become undefined in the context of generator lambdas.
 
 		const rot_scan_h_counter_v = vector(this.rot_scan_h_v.x, -this.rot_scan_h_v.y);
@@ -174,7 +219,7 @@ export class Camera {
 				[fr_v, lf_v] = rotate_vectors(fr_v, lf_v, rot_vec);
 
 			for (let i = from_x; i != to_x; i += loop_inc) {
-				yield { x: i, y: y, dir: lf_v.clone() };
+				yield { x: i, y: y, dir: fr_v.clone() };
 				[fr_v, lf_v] = rotate_vectors(fr_v, lf_v, rot_vec);
 			}
 		}
