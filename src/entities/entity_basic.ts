@@ -18,15 +18,18 @@ import { EntityOtree } from '@app/octree_entity';
 import { Entity } from '@app/entity';
 import { Point } from '@app/math/linalg';
 import { Material } from '@app/material'
+import { Texture } from '@app/texture/texture';
 
 /** BasicEntity is an entity with static pos and material parameters. */
 export abstract class BasicEntity extends Entity {
 	protected pos: Point;
 	protected material: Material;
+	protected texture: Texture;
 
-	constructor(entity_otree: EntityOtree, material: Material, pos: Point) {
+	constructor(entity_otree: EntityOtree, material: Material, texture: Texture, pos: Point) {
 		super(entity_otree);
 		this.material = material;
+		this.texture = texture;
 		this.pos = pos;
 	}
 
@@ -42,5 +45,12 @@ export abstract class BasicEntity extends Entity {
 		const old_material = this.material;
 		this.material = material;
 		return old_material;
+	}
+
+	get_texture() { return this.texture; }
+	set_texture(texture: Texture): Texture {
+		const old_texture = this.texture;
+		this.texture = texture;
+		return old_texture;
 	}
 }

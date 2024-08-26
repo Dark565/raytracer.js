@@ -21,14 +21,15 @@ import { point_in_space } from '@app/space';
 import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
 import { Material } from '@app/material';
+import { Texture } from '@app/texture/texture';
 import * as linalg from '@app/math/linalg';
 
 export class BoxEntity extends BasicEntity {
 	private size: number;
 	private face_cache: [Point, linalg.Plane][];
 
-	constructor(entity_otree: EntityOtree, material: Material, pos: Point, size: number) {
-		super(entity_otree, material, pos);
+	constructor(entity_otree: EntityOtree, material: Material, texture: Texture, pos: Point, size: number) {
+		super(entity_otree, material, texture, pos);
 		this.size = size;
 		this.cache_faces();
 	}
@@ -86,7 +87,7 @@ export class BoxEntity extends BasicEntity {
 		}
 
 		const normal = this.face_cache[closest_point_face[1]][1].normal;
-		const coll_info = { point: closest_point_face[0], material: this.material, normal: normal };
+		const coll_info = { point: closest_point_face[0], material: this.material, texture: this.texture, normal: normal };
 		return coll_info;
 	}
 
@@ -113,6 +114,14 @@ export class BoxEntity extends BasicEntity {
 			[pos.sub(point(hsize, -hsize, hsize)), vector(0, 1, 0)],
 			[pos.sub(point(-hsize, hsize, hsize)), vector(1, 0, 0)]
 		]
+	}
+
+	/** The mapping for the box assumes the texture image is of the 6:1 proportion.
+	 *  Faces are mapped in the following order:
+	 *  left, right, top, bottom, front, back.
+	 */
+	map_uv(p: Point): [number, number] {
+		throw Error("tbi");
 	}
 
 	private cache_faces() {

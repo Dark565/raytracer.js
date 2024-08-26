@@ -16,10 +16,13 @@
 
 import { Point } from '@app/math/linalg';
 import { Ray } from '@app/raytracer';
+import { Entity } from '@app/entity';
+import { Texture } from '@app/texture/texture';
 
 export enum ResponseType {
 	REFLECTION,
-	TRANSMISSION
+	REFRACTION,
+	BOTH // needs additional ray
 };
 
 /** The abstract class for all materials */
@@ -31,7 +34,30 @@ export abstract class Material {
 	abstract is_mirror(point: Point): boolean;
 
 	/** Modify ray's attributes (i.e the color) depending on material's parameters. */
-	abstract alter_ray(ray: Ray, point: Point): boolean;
+	abstract alter_ray(ray: Ray, entity: Entity, texture: Texture, point: Point): boolean;
+
+	/** Set the transparence index of the material.
+	 * If transparence index is greater than 0, the raytracer engine
+	 * shoots one additional ray from the point of incidence to handle
+	 * ray transmission through material.
+	 * Range: <0, 1>. */
+	abstract set transparence_index(index: number);
+	abstract get transparence_index();
+
+	/** Set the refractive index of the material.
+	 * Range: (0, +inf) */
+	abstract set refractive_index(index: number);
+	abstract get refractive_index(): number;
+
+	/** Set the roughness index of the material.
+	 *  Roughness is a measure of the extent to which a material deviates from being smooth.
+	 *  The rougher the meterial, the more it scatters the light.
+	 *  Scattering has the visible effect of blurring reflection.
+	 *  Roughness index of 0 is equivalent to the material being a perfect mirror.
+	 *  Range: <0, 1>
+	 */
+	abstract set roughness_index(index: number);
+	abstract get roughness_index(): number;
 }
 
 /** A material type whose light response is determined only by its static parameters */

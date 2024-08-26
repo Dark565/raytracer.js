@@ -122,7 +122,7 @@ export class Ray {
 
 				this.refcount++;
 				// TODO: Convert the intersection point to the surface point for materials
-				collision_info.material.alter_ray(this, collision_info.point);
+				collision_info.material.alter_ray(this, entity, collision_info.texture, collision_info.point);
 				this.path_distance += collision_info.point.sub(this.refpoint).length();
 				this.refpoint = collision_info.point;
 				walker.start_point = this.refpoint;

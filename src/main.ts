@@ -23,7 +23,10 @@ import { EntitySet, EntityOtree, new_entity_octree, add_entity_to_octree } from 
 import { Entity, CollisionInfo } from '@app/entity';
 import { SphereEntity } from '@app/entities/entity_sphere';
 import * as material from '@app/material';
-import { SolidMaterial } from '@app/materials/material_solid';
+import { SIMPLE_SMOOTH_MATERIAL } from '@app/materials/material_solid';
+import { Texture, TextureError } from '@app/texture/texture';
+import { ImageTexture } from '@app/texture/texture_image';
+import { SolidTexture } from '@app/texture/texture_solid';
 import { BoxEntity } from '@app/entities/entity_box';
 import { Raytracer } from '@app/raytracer';
 import { Camera, CameraConfig } from '@app/view/camera';
@@ -33,6 +36,15 @@ const CANVAS_ID = 'rtcanvas';
 const STATS_DIV_ID = 'rtstats';
 const REFMAX = 6;
 
+const TEXTURE_URLS: [string,boolean,boolean][] = 
+	[['assets/texture1.jpg', false, false],
+	 ['assets/texture2.jpg', false, false],
+   ['assets/texture3.jpg', true, false]];
+
+function load_textures(): Texture[] {
+	return TEXTURE_URLS.map((url) => new ImageTexture(url[0], {r:0,g:0,b:0,a:1.0}, url[1], url[2]));
+}
+
 // Return a random color vector from the RGB color space with a specific magnitude (intensity)
 function get_random_color_with_intensity(intensity: number): Color {
 	const [r,g,b] = Array(3).fill(0).map(()=>Math.random());
@@ -40,7 +52,19 @@ function get_random_color_with_intensity(intensity: number): Color {
 	return { r: col_vec.x, g: col_vec.y, b: col_vec.z, a: 1.0 };
 }
 
-function generate_some_aligned_entities(tree: EntityOtree, n_entities: number) {
+/* Return a random image texture or a new solid color one */
+function get_random_texture(img_txt_prob: number, img_textures: Texture[]) {
+	const rnd = Math.random();
+	if (rnd <= img_txt_prob) { // get image texture
+		const txt_i = (Math.random() * img_textures.length) << 0;
+		return img_textures[txt_i];
+	} else {
+		const rand_color = get_random_color_with_intensity(1.0);
+		return new SolidTexture(rand_color);
+	}
+}
+
+function generate_some_aligned_entities(tree: EntityOtree, n_entities: number, img_txt_prob: number, img_textures: Texture[]) {
 	const entity_classes = [SphereEntity, BoxEntity];
 
 	for (let i = 0; i < n_entities; i++) {
@@ -48,10 +72,9 @@ function generate_some_aligned_entities(tree: EntityOtree, n_entities: number) {
 	const n_quant = 1 << (level);
 		const size = 1 / n_quant;
 		const [x, y, z] = [0,0,0].map(_ => { return ((Math.random() * n_quant) << 0) * size + size/2 });
-		const rand_color = get_random_color_with_intensity(1.0);
-		const new_material = new SolidMaterial(rand_color, true, material.ResponseType.REFLECTION);
+		const texture = get_random_texture(img_txt_prob, img_textures);
 		console.log(`${x}, ${y}, ${z}   ${size}`);
-		const entity = new SphereEntity(undefined, new_material, point(x,y,z), size);
+		const entity = new SphereEntity(undefined, SIMPLE_SMOOTH_MATERIAL, texture, point(x,y,z), size);
 		entity.set_octree(tree);
 		tree.value.set.add(entity);
 		//add_entity_to_octree(tree, entity, { max_in_depth: 16, max_out_depth: 4 });
@@ -185,7 +208,7 @@ class PlayerInterface {
 	}
 }
 
-function main() {
+async function main() {
 	const canvas = document.getElementById(CANVAS_ID) as HTMLCanvasElement;
 	if (canvas == undefined)
 		throw Error("Cannot access the canvas!!");
@@ -215,7 +238,18 @@ function main() {
 
 	//const gen_material = new SolidMaterial({r: 1.0, g: 0.33, b: 1.0, a: 1.0}, true, material.ResponseType.REFLECTION);
 
-	generate_some_aligned_entities(otree, 5);
+	const textures = load_textures();
+	// ensure all textures are loaded before running
+	try {
+		await Promise.all(textures.map((txt) => txt.get_loading_promise()));
+	} catch (err) {
+		if (err instanceof TextureError)
+			console.log(err.message);
+		else
+			throw err;
+	}
+
+	generate_some_aligned_entities(otree, 5, 1.0, textures);
 
 	const tick_fn = () => {
 		raytracer.trace_frame();

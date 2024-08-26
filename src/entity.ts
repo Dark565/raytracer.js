@@ -20,13 +20,16 @@ import { EntityOtree } from '@app/octree_entity';
 import { Point, Vector } from '@app/math/linalg';
 import { Ray } from '@app/raytracer';
 import { Material } from '@app/material'
+import { Texture } from '@app/texture/texture';
 
 /** Information about ray collision. */
 export interface CollisionInfo {
 	/** Point of the collision. (intersection point) */
 	point: Point;
- /** Material of the entity. */
+  /** Material of the entity. */
 	material: Material;
+	/** The texture of the entity */
+	texture: Texture;
 	/** The (normalized) vector orthogonal to the entity surface. */
 	normal: Vector;
 }
@@ -66,8 +69,15 @@ export abstract class Entity {
 	/** Set material and return the old one */
 	abstract set_material(material: Material): Material;
 
+	abstract get_texture(): Texture;
+	/** Set texture and return the old one */
+	abstract set_texture(texture: Texture): Texture;
+
 	/** Get the axis-aligned bounding box for the entity.
 	 * @returns A pair: the attachment point of the first vertex and the length of edges. */
 	abstract get_aabb(): [Point, number];
+
+	/** Map 3D surface coordinates to 2D texture coordinates */
+	abstract map_uv(p: Point): [number, number];
 
 }

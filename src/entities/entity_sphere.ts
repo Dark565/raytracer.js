@@ -20,14 +20,15 @@ import { Point, point, IntersectionDirection } from '@app/math/linalg';
 import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
 import { Material } from '@app/material';
+import { Texture } from '@app/texture/texture';
 import * as linalg from '@app/math/linalg';
 
 export class SphereEntity extends BasicEntity {
 	private diameter: number;
 	private sphere_math: linalg.Sphere;
 
-	constructor(entity_otree: EntityOtree, material: Material, pos: Point, diameter: number) {
-		super(entity_otree, material, pos);
+	constructor(entity_otree: EntityOtree, material: Material, texture: Texture, pos: Point, diameter: number) {
+		super(entity_otree, material, texture, pos);
 		this.diameter = diameter;
 		this.sphere_math = new linalg.Sphere(this.pos, this.diameter/2);
 	}
@@ -60,7 +61,7 @@ export class SphereEntity extends BasicEntity {
 			return null;
 
 		const normal = cross_point[0].sub(this.pos).scale(2/this.diameter);
-		const coll_info = { point: cross_point[0], material: this.material, normal: normal };
+		const coll_info = { point: cross_point[0], material: this.material, texture: this.texture, normal: normal };
 		return coll_info;
 	}
 
@@ -70,5 +71,14 @@ export class SphereEntity extends BasicEntity {
 			this.get_pos().sub(point(diameter, diameter, diameter).scale(0.5)),
 			diameter
 		]
+	}
+
+	map_uv(p: Point): [number, number] {
+		const dist = p.sub(this.pos);
+		/* EPSILON is subtracted to ensure the resulting u,v are in range <-eps, 1) */
+		const u = Math.atan2(dist.v[1], dist.v[0])/Math.PI/2.0 + 0.5 - Number.EPSILON;
+		const v = Math.atan2(dist.v[2], dist.reduce(2).length())/Math.PI + 0.5 - Number.EPSILON;
+
+		return [u,v];
 	}
 }
