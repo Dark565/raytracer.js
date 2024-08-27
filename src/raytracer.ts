@@ -18,7 +18,8 @@ import { Vector, Point, vector } from '@app/math/linalg';
 import { clamp } from '@app/math/mathutils';
 import { EntitySet, new_entity_octree_walker, EntityOtree, EntityOtreeWalker, EntityOtreePos } from '@app/octree_entity';
 import { Entity, CollisionInfo } from '@app/entity';
-import { Color, color, clone_color, mul_color } from '@app/physics/color';
+import { Sky } from '@app/sky/sky';
+import { Color, color, clone_color, mul_color, clamp_color } from '@app/physics/color';
 import * as material from '@app/material';
 import { Camera } from '@app/view/camera';
 import { Screen } from '@app/view/screen';
@@ -27,17 +28,26 @@ import * as debug from '@app/debug/object_hacks';
 export interface RaytracerConfig {
 	/** Global maximum count of collisions for all rays */
 	refmax: number;
+	/** Sky definition */
+	sky: Sky;
+	/** It is the parameter A to the equation: isl_coef = 1 / (A * intensity)^2
+	 * where isl_coef (inverse square law coefficient) controls how much distance affects light intensity. */
+	distance_attenuation_factor: number;
 };
 
 //const COLOR_SKY   = color(1e-1,1e-1,1e-1);
-const COLOR_SKY = color(1,1,1);
+//const COLOR_SKY = color(1,1,1);
 const COLOR_BLACK = color(0,0,0);
 const COLOR_WHITE = color(1,1,1);
+
+const COLOR_SKY = COLOR_BLACK;
 
 const VECTOR_ORTHO = vector(0,1);
 
 /* Ray description class */
 export class Ray {
+	/** The raytracer */
+	private tracer: Raytracer;
 	/** Current count of reflections */
 	private refcount: number;
 	/** Maximum count of reflections */
@@ -55,10 +65,11 @@ export class Ray {
 
 	private static debug_ray_count = 0;
 
-	constructor(refmax: number, start_point: Point, dir: Vector,
+	constructor(rt: Raytracer, refmax: number, start_point: Point, dir: Vector,
 							color: Color, walker: EntityOtreeWalker,
 							flags: { keep_dir_unnormalized?: boolean } = {}) 
 	{
+		this.tracer = rt;
 		this.refcount = 0;
 		this.refmax = refmax;
 		this.refpoint = start_point.clone();
@@ -98,6 +109,7 @@ export class Ray {
 		walker.start_point = (this.refpoint);
 		let tree_node: ReturnType<typeof walker.next>;
 		let last_entity: Entity = undefined;
+		let light_hit = false;
 		while ((tree_node = walker.next()) != undefined) {
 			//console.log(`${Ray.debug_ray_count}: got node id ${debug.unique_object_id(tree_node.node)}, walker's stack size: ${walker.info_stack.length}`);
 
@@ -106,13 +118,13 @@ export class Ray {
 			let collision_info: CollisionInfo;
 			let entity: Entity;
 			for (entity of search_array.set) {
-				if (entity == last_entity) {
-					continue;
-				}
+				//if (entity == last_entity) {
+				//	continue;
+				//}
 
 				collision_info = entity.collision_info(this);
 				/* TODO: Probably find a better way for getting rid of the previous collision point */
-				if (collision_info != undefined /*&& !collision_info.point.near_equal(this.refpoint, 1e-3)*/)
+				if (collision_info != undefined && !collision_info.point.near_equal(this.refpoint, 1e-5))
 					break;
 			}
 
@@ -121,13 +133,17 @@ export class Ray {
 				last_entity = entity;
 
 				this.refcount++;
-				// TODO: Convert the intersection point to the surface point for materials
 				collision_info.material.alter_ray(this, entity, collision_info.texture, collision_info.point);
 				this.path_distance += collision_info.point.sub(this.refpoint).length();
 				this.refpoint = collision_info.point;
 				walker.start_point = this.refpoint;
 
 				const response_type = collision_info.material.response_type(collision_info.point);
+				if (collision_info.material.is_light_source()) {
+					light_hit = true;
+					break;
+				}
+
 				switch (response_type) {
 				case material.ResponseType.REFLECTION:
 					if (!collision_info.material.is_mirror(collision_info.point)) {
@@ -139,7 +155,7 @@ export class Ray {
 					this.dir = this.dir.reflection(collision_info.normal);
 					walker.direction = this.dir;
 					break;
-				case material.ResponseType.TRANSMISSION:
+				case material.ResponseType.REFRACTION:
 					break
 				default: // the ray is scattered by default
 					return;
@@ -156,24 +172,25 @@ export class Ray {
 			}
 		}
 
-		/* Attenuate the ray's intensity due to the inverse square distance */
-		const isl_coef = 1.0 / (1 + this.path_distance)**2;
-		this.color = mul_color(this.color, { r: isl_coef, g: isl_coef, b: isl_coef, a: 1.0 });
+		if (!light_hit) {
+			const sky_color = this.tracer.config.sky.get_color(this.dir);
+			this.color = mul_color(this.color, sky_color);
+			return;
+		}
 
-		/* If there is nothing more to intersect, modulate it with the sky color
-		 * TODO: Define the Skybox class which will be used in this case
-		 *       to get a specific color.
-		 */
-		this.color = mul_color(this.color, COLOR_SKY);
+		/* Attenuate the ray's intensity due to the inverse square law */
+		const isl_coef = 1.0 / (Number.EPSILON + (this.path_distance * this.tracer.config.distance_attenuation_factor)**2);
+		this.color = clamp_color(mul_color(this.color, { r: isl_coef, g: isl_coef, b: isl_coef, a: 1.0 }));
 	}
 }
 
 /** Main raytracer class */
 export class Raytracer {
 	private walker: EntityOtreeWalker;
-	private config: RaytracerConfig;
 	private camera: Camera;
 	private screen: Screen;
+
+	config: RaytracerConfig;
 
 	constructor(config: RaytracerConfig, otree: EntityOtree, camera: Camera, screen: Screen) {
 		this.camera = camera;
@@ -192,7 +209,7 @@ export class Raytracer {
 
 	trace_frame() {
 		for (let campx of this.camera.get_dir_for_each_pixel()) {
-			const ray = new Ray(this.config.refmax, this.camera.get_pos(), campx.dir, COLOR_WHITE,
+			const ray = new Ray(this, this.config.refmax, this.camera.get_pos(), campx.dir, COLOR_WHITE,
 													this.walker, { keep_dir_unnormalized: true });
 
 			ray.trace();

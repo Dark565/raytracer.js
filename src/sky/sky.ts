@@ -14,31 +14,21 @@
  * limitations under the License.
  */
 
-import { Texture } from '@app/texture/texture';
+import { Vector } from '@app/math/linalg';
 import { Color } from '@app/physics/color';
+import { Texture } from '@app/texture/texture';
 
-/** The simplest texture type with just one solid color */
-export class SolidTexture extends Texture {
-	private color: Color;
+/** Sky is the class representing skybox/skysphere.
+ *  The difference between the sky and a simple box/sphere entity
+ *  positioned at the middle of the scene is that
+ *  sky position is always relative to the camera (or other point) and retrieving a
+ *  pixel from the sky's texture doesn't need complex intersection calculations. */
+export abstract class Sky {
+	texture: Texture;
 
-	/** Load an image texture from an URL.
-	 * @param image_url The URL;
-	 * @param fallback_color Color to use for fallback before the texture is loaded or on failure.
-	 */
-	constructor(color: Color) {
-		super();
-		this.color = color;
+	constructor(texture: Texture) {
+		this.texture = texture;
 	}
 
-	get_color(_u: number, _v: number): Color {
-		return this.color;
-	}
-
-	get_size(): [number, number]|undefined {
-		return undefined;
-	}
-
-	get_loading_promise(): Promise<void> {
-		return new Promise<void>((resolve)=>resolve());
-	}
-}
+	abstract get_color(direction: Vector): Color;
+};

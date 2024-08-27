@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
+import { Vector } from '@app/math/linalg';
 
-/** Get a type-unique ID of an object */
-export function unique_object_id(obj: any): number {
-	if (obj.__uniqueid != undefined)
-		return obj.__uniqueid as number;
+export function uv_map_sphere(dir: Vector): [number,number] {
+		/* EPSILON is subtracted to ensure the resulting u,v are in range <-eps, 1) */
+		const u = Math.atan2(dir.v[1], dir.v[0])/Math.PI/2.0 + 0.5 - Number.EPSILON;
+		const v = Math.atan2(dir.v[2], dir.reduce(2).length())/Math.PI + 0.5 - Number.EPSILON;
 
-	const ctor = obj.constructor;
-	ctor.__uniqueid_current ??= 0;
-	return obj.__uniqueid = ctor.__uniqueid_current++;
+		return [u,v];
 }
+
+// TODO: uv_map_box

@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
+import { Vector } from '@app/math/linalg';
+import { uv_map_sphere } from '@app/math/uv_mapping';
+import { Color } from '@app/physics/color';
+import { Sky } from '@app/sky/sky';
 
-/** Get a type-unique ID of an object */
-export function unique_object_id(obj: any): number {
-	if (obj.__uniqueid != undefined)
-		return obj.__uniqueid as number;
-
-	const ctor = obj.constructor;
-	ctor.__uniqueid_current ??= 0;
-	return obj.__uniqueid = ctor.__uniqueid_current++;
+export class SkySphere extends Sky {
+	get_color(dir: Vector): Color {
+		const [u,v] = uv_map_sphere(dir);
+		return this.texture.get_color(u,v);
+	}
 }

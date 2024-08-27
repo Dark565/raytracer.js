@@ -23,12 +23,13 @@ import { EntitySet, EntityOtree, new_entity_octree, add_entity_to_octree } from 
 import { Entity, CollisionInfo } from '@app/entity';
 import { SphereEntity } from '@app/entities/entity_sphere';
 import * as material from '@app/material';
-import { SIMPLE_SMOOTH_MATERIAL } from '@app/materials/material_solid';
+import { SIMPLE_SMOOTH_MATERIAL, SIMPLE_LIGHT_MATERIAL } from '@app/materials/material_solid';
 import { Texture, TextureError } from '@app/texture/texture';
 import { ImageTexture } from '@app/texture/texture_image';
 import { SolidTexture } from '@app/texture/texture_solid';
+import { SkySphere } from '@app/sky/sky_sphere';
 import { BoxEntity } from '@app/entities/entity_box';
-import { Raytracer } from '@app/raytracer';
+import { Raytracer, RaytracerConfig } from '@app/raytracer';
 import { Camera, CameraConfig } from '@app/view/camera';
 import { CanvasScreen } from '@app/view/screen_canvas';
 
@@ -64,17 +65,33 @@ function get_random_texture(img_txt_prob: number, img_textures: Texture[]) {
 	}
 }
 
-function generate_some_aligned_entities(tree: EntityOtree, n_entities: number, img_txt_prob: number, img_textures: Texture[]) {
+function generate_some_aligned_entities(tree: EntityOtree, n_entities: number, img_txt_prob: number, light_prob: number, img_textures: Texture[]) {
 	const entity_classes = [SphereEntity, BoxEntity];
 
+	let existing_points: Point[] = [];
+
 	for (let i = 0; i < n_entities; i++) {
-	const level = 1 + Math.floor(Math.random() * 2);
-	const n_quant = 1 << (level);
+		const level = 1 + Math.floor(Math.random() * 2);
+		const n_quant = 1 << (level);
 		const size = 1 / n_quant;
 		const [x, y, z] = [0,0,0].map(_ => { return ((Math.random() * n_quant) << 0) * size + size/2 });
-		const texture = get_random_texture(img_txt_prob, img_textures);
+		const e_point = point(x,y,z);
+		let already_existing = false;
+		for (let p of existing_points) {
+			if (e_point.near_equal(p, 1e-3)) {
+				already_existing = true;
+				break;
+			}
+		}
+
+		if (already_existing)
+			continue;
+
+		const is_light = Math.random() <= light_prob;
+
+		const texture = get_random_texture(is_light ? 0 : img_txt_prob, img_textures);
 		console.log(`${x}, ${y}, ${z}   ${size}`);
-		const entity = new SphereEntity(undefined, SIMPLE_SMOOTH_MATERIAL, texture, point(x,y,z), size);
+		const entity = new SphereEntity(undefined, is_light ? SIMPLE_LIGHT_MATERIAL : SIMPLE_SMOOTH_MATERIAL, texture, point(x,y,z), size);
 		entity.set_octree(tree);
 		tree.value.set.add(entity);
 		//add_entity_to_octree(tree, entity, { max_in_depth: 16, max_out_depth: 4 });
@@ -234,14 +251,14 @@ async function main() {
 	const camera = new Camera(camera_conf, reset_pos, 0, Math.PI/180 * 30);
 
 	const otree = new_entity_octree({pos: point(0,0,0), size: 1}, undefined);
-	const raytracer = new Raytracer({refmax: REFMAX}, otree, camera, screen);
 
 	//const gen_material = new SolidMaterial({r: 1.0, g: 0.33, b: 1.0, a: 1.0}, true, material.ResponseType.REFLECTION);
 
 	const textures = load_textures();
+	let sky_txt = new ImageTexture('assets/sky2.jpg', {r:0.2,g:0.2,b:0.7,a:1.0});
 	// ensure all textures are loaded before running
 	try {
-		await Promise.all(textures.map((txt) => txt.get_loading_promise()));
+		await Promise.all([...textures, sky_txt].map((txt) => txt.get_loading_promise()));
 	} catch (err) {
 		if (err instanceof TextureError)
 			console.log(err.message);
@@ -249,7 +266,18 @@ async function main() {
 			throw err;
 	}
 
-	generate_some_aligned_entities(otree, 5, 1.0, textures);
+	console.log("textures loaded");
+
+	generate_some_aligned_entities(otree, 3, 0.75, 0.5, textures);
+	const sky = new SkySphere(sky_txt);
+
+	const raytracer_conf: RaytracerConfig = {
+		refmax: REFMAX,
+		distance_attenuation_factor: 2,
+		sky: sky
+	};
+
+	const raytracer = new Raytracer(raytracer_conf, otree, camera, screen);
 
 	const tick_fn = () => {
 		raytracer.trace_frame();

@@ -17,6 +17,7 @@
 import { EntitySet, EntityOtree } from '@app/octree_entity';
 import { Ray } from '@app/raytracer';
 import { Point, point, IntersectionDirection } from '@app/math/linalg';
+import { uv_map_sphere } from '@app/math/uv_mapping';
 import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
 import { Material } from '@app/material';
@@ -75,10 +76,6 @@ export class SphereEntity extends BasicEntity {
 
 	map_uv(p: Point): [number, number] {
 		const dist = p.sub(this.pos);
-		/* EPSILON is subtracted to ensure the resulting u,v are in range <-eps, 1) */
-		const u = Math.atan2(dist.v[1], dist.v[0])/Math.PI/2.0 + 0.5 - Number.EPSILON;
-		const v = Math.atan2(dist.v[2], dist.reduce(2).length())/Math.PI + 0.5 - Number.EPSILON;
-
-		return [u,v];
+		return uv_map_sphere(dist);
 	}
 }

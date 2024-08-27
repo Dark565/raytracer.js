@@ -7,8 +7,8 @@ import { Texture } from '@app/texture/texture';
 
 /** Solid color material */
 export class SolidMaterial extends StaticMaterial {
-	constructor(mirror: boolean, response: ResponseType) {
-		super(mirror, response);
+	constructor(mirror: boolean, light_source: boolean, response: ResponseType) {
+		super(mirror, light_source, response);
 	}
 
 	alter_ray(ray: Ray, entity: Entity, texture: Texture, p: Point): boolean {
@@ -20,4 +20,5 @@ export class SolidMaterial extends StaticMaterial {
 	}
 }
 
-export const SIMPLE_SMOOTH_MATERIAL = new SolidMaterial(true, ResponseType.REFLECTION);
+export const SIMPLE_SMOOTH_MATERIAL = new SolidMaterial(true, false, ResponseType.REFLECTION);
+export const SIMPLE_LIGHT_MATERIAL  = new SolidMaterial(false, true, ResponseType.REFLECTION);

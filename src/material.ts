@@ -36,18 +36,21 @@ export abstract class Material {
 	/** Modify ray's attributes (i.e the color) depending on material's parameters. */
 	abstract alter_ray(ray: Ray, entity: Entity, texture: Texture, point: Point): boolean;
 
+	/** Light source is the final target of a ray */
+	abstract is_light_source(): boolean;
+
 	/** Set the transparence index of the material.
 	 * If transparence index is greater than 0, the raytracer engine
 	 * shoots one additional ray from the point of incidence to handle
 	 * ray transmission through material.
 	 * Range: <0, 1>. */
-	abstract set transparence_index(index: number);
-	abstract get transparence_index();
+	//abstract set transparence_index(index: number);
+	//abstract get transparence_index();
 
 	/** Set the refractive index of the material.
 	 * Range: (0, +inf) */
-	abstract set refractive_index(index: number);
-	abstract get refractive_index(): number;
+	//abstract set refractive_index(index: number);
+	//abstract get refractive_index(): number;
 
 	/** Set the roughness index of the material.
 	 *  Roughness is a measure of the extent to which a material deviates from being smooth.
@@ -56,8 +59,8 @@ export abstract class Material {
 	 *  Roughness index of 0 is equivalent to the material being a perfect mirror.
 	 *  Range: <0, 1>
 	 */
-	abstract set roughness_index(index: number);
-	abstract get roughness_index(): number;
+	//abstract set roughness_index(index: number);
+	//abstract get roughness_index(): number;
 }
 
 /** A material type whose light response is determined only by its static parameters */
@@ -69,12 +72,16 @@ export abstract class StaticMaterial extends Material {
 	/** The response type for a material. */
 	response: ResponseType;
 
+	/** Is a light source */
+	light_source: boolean;
+
 	/** The result of is_mirror(). */
 	mirror: boolean;
 
-	protected constructor(mirror: boolean, response: ResponseType) {
+	protected constructor(mirror: boolean, light_source: boolean, response: ResponseType) {
 		super();
 		this.mirror = mirror;
+		this.light_source = light_source;
 		this.response = response;
 	}
 
@@ -84,5 +91,9 @@ export abstract class StaticMaterial extends Material {
 
 	is_mirror(_: Point) {
 		return this.mirror;
+	}
+
+	is_light_source() {
+		return this.light_source;
 	}
 }
