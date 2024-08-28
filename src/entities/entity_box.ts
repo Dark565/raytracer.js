@@ -16,7 +16,8 @@
 
 import { EntitySet, EntityOtree } from '@app/octree_entity';
 import { Ray } from '@app/raytracer';
-import { Point, Vector, point, vector } from '@app/math/linalg';
+import { Point, Vector, point } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 import { point_in_space } from '@app/space'; 
 import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
@@ -59,7 +60,7 @@ export class BoxEntity extends BasicEntity {
 
 		const size = this.get_size();
 
-		const size_vec = vector(size, size, size);
+		const size_vec = vector.vector(size, size, size);
 		let closest_point_face: [Point, number] = [point(-Infinity,-Infinity,-Infinity), undefined];
 		let n_potential_faces = 0;
 
@@ -68,8 +69,8 @@ export class BoxEntity extends BasicEntity {
 			//console.log(`SquareEntity.collision_info(): cross_point ${cross_point[0].v}`);
 			//console.log(`SquareEntity.collision_info(): cross_point_face_rel ${cross_point[0].sub(face[0]).v}`);
 			//console.log(`SquareEntity.collision_info(): face ${face[0].v} ${size_vec.v}`);
-			if (point_in_space(cross_point[0].sub(face[0]), { pos: face[0], size: size_vec })) {
-				if (closest_point_face[0].sub(raypos).length_sq() < closest_point_face[0].sub(raypos).length_sq()) {
+			if (point_in_space(vector.sub(cross_point[0], face[0]), { pos: face[0], size: size_vec })) {
+				if (vector.length_sq(vector.sub(closest_point_face[0], raypos)) < vector.length_sq(vector.sub(closest_point_face[0], raypos))) {
 					closest_point_face[0] = cross_point[0];
 					closest_point_face[1] = i;
 				}
@@ -95,7 +96,7 @@ export class BoxEntity extends BasicEntity {
 		const size = this.get_size();
 		const hsize = size/2;
 		return [
-			this.get_pos().sub(point(hsize, hsize, hsize)),
+			vector.sub(this.get_pos(), point(hsize, hsize, hsize)),
 			size
 		]
 	}
@@ -107,12 +108,12 @@ export class BoxEntity extends BasicEntity {
 		const pos = this.get_pos();
 
 		return [
-			[pos.sub(point(hsize, hsize, hsize)), vector(0, 0, -1)],
-			[pos.sub(point(hsize, hsize, hsize)), vector(0, -1, 0)],
-			[pos.sub(point(hsize, hsize, hsize)), vector(-1, 0, 0)],
-			[pos.sub(point(hsize, hsize, -hsize)), vector(0, 0, 1)],
-			[pos.sub(point(hsize, -hsize, hsize)), vector(0, 1, 0)],
-			[pos.sub(point(-hsize, hsize, hsize)), vector(1, 0, 0)]
+			[vector.sub(pos, point(hsize, hsize, hsize)), vector.vector(0, 0, -1)],
+			[vector.sub(pos, point(hsize, hsize, hsize)), vector.vector(0, -1, 0)],
+			[vector.sub(pos, point(hsize, hsize, hsize)), vector.vector(-1, 0, 0)],
+			[vector.sub(pos, point(hsize, hsize, -hsize)), vector.vector(0, 0, 1)],
+			[vector.sub(pos, point(hsize, -hsize, hsize)), vector.vector(0, 1, 0)],
+			[vector.sub(pos, point(-hsize, hsize, hsize)), vector.vector(1, 0, 0)]
 		]
 	}
 

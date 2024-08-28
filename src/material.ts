@@ -60,7 +60,7 @@ export abstract class Material {
 	 *  Range: <0, 1>
 	 */
 	//abstract set roughness_index(index: number);
-	//abstract get roughness_index(): number;
+	abstract get roughness_index(): number;
 }
 
 /** A material type whose light response is determined only by its static parameters */
@@ -78,11 +78,14 @@ export abstract class StaticMaterial extends Material {
 	/** The result of is_mirror(). */
 	mirror: boolean;
 
-	protected constructor(mirror: boolean, light_source: boolean, response: ResponseType) {
+	roughness_index: number;
+
+	protected constructor(response: ResponseType, light_source: boolean, mirror: boolean, roughness: number) {
 		super();
-		this.mirror = mirror;
-		this.light_source = light_source;
 		this.response = response;
+		this.light_source = light_source;
+		this.mirror = mirror;
+		this.roughness_index = roughness;
 	}
 
 	response_type(_: Point) {

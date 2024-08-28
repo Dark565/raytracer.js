@@ -1,6 +1,7 @@
 import { Octree } from '@app/octree';
 import * as space from '@app/octree_space';
 import { point } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 
 test('point_at_pos() fuzzy test', ()=>{
 		const otree_dim: space.OctreeDim = { pos: point(0,0,0), size: 1 };
@@ -22,8 +23,8 @@ test('point_at_pos() fuzzy test', ()=>{
 				p.v[j] = rnd & (1<<j) ? rnd_between(0.5,1.0) : rnd_between(0.0,0.5);
 
 			if (rnd == 0) {
-				let sp = p.scale(1/0.250);
-				rnd = (sp.x <<0) + (sp.y <<1) + (sp.z <<2);
+				let sp = vector.scale(p, 1/0.250);
+				rnd = (sp.v[0] <<0) + (sp.v[1] <<1) + (sp.v[2] <<2);
 				expected_node = inner_tree;
 			}
 

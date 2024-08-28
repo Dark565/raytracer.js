@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { Vector, Point, vector, point } from '@app/math/linalg';
+import { Vector, Point, point } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 import { Color } from '@app/physics/color';
 import { clamp } from '@app/math/mathutils';
 import { Octree } from '@app/octree';
@@ -49,8 +50,8 @@ function load_textures(): Texture[] {
 // Return a random color vector from the RGB color space with a specific magnitude (intensity)
 function get_random_color_with_intensity(intensity: number): Color {
 	const [r,g,b] = Array(3).fill(0).map(()=>Math.random());
-	const col_vec = vector(r,g,b).normalize_self().scale_self(intensity);
-	return { r: col_vec.x, g: col_vec.y, b: col_vec.z, a: 1.0 };
+	const col_vec = vector.scale_self(vector.normalize_self(vector.vector(r,g,b)), intensity);
+	return { r: col_vec.v[0], g: col_vec.v[1], b: col_vec.v[2], a: 1.0 };
 }
 
 /* Return a random image texture or a new solid color one */
@@ -78,7 +79,7 @@ function generate_some_aligned_entities(tree: EntityOtree, n_entities: number, i
 		const e_point = point(x,y,z);
 		let already_existing = false;
 		for (let p of existing_points) {
-			if (e_point.near_equal(p, 1e-3)) {
+			if (vector.near_equal(e_point, p, 1e-3)) {
 				already_existing = true;
 				break;
 			}
@@ -152,10 +153,10 @@ class PlayerInterface {
 
 		const pos = this.camera.get_pos();
 		const fr_vec = this.camera.get_front_vector();
-		const fr_vec_xy = fr_vec.reduce(2);
+		const fr_vec_xy = <vector.Vector2> vector.reduce(fr_vec, 2);
 
-		const angle_deg_x = fr_vec_xy.angle() * 180/Math.PI;
-		const angle_deg_y = vector(fr_vec_xy.length(), fr_vec.v[2]).angle() * 180/Math.PI;
+		const angle_deg_x = vector.angle2D(fr_vec_xy) * 180/Math.PI;
+		const angle_deg_y = vector.angle2D(vector.vector2(vector.length(fr_vec_xy), fr_vec.v[2])) * 180/Math.PI;
 
 		this.stat_elem.innerHTML = `
 			<h2>Camera</h2>
@@ -196,7 +197,7 @@ class PlayerInterface {
 		console.log("key down");
 
 		if (ev.code == 'Space') {
-			this.camera.move(vector(0,0,this.config.move_up));
+			this.camera.move(vector.vector(0,0,this.config.move_up));
 		} else {
 			switch (ev.key) {
 				case 'w': // move forward
@@ -215,7 +216,7 @@ class PlayerInterface {
 					this.camera.reset_angles();
 					break;
 				case 'Shift': // move down
-					this.camera.move(vector(0,0,-this.config.move_down));
+					this.camera.move(vector.vector(0,0,-this.config.move_down));
 					break;
 			}
 		}

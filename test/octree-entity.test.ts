@@ -6,6 +6,7 @@ import { SolidTexture } from '@app/texture/texture_solid';
 import { SphereEntity } from '@app/entities/entity_sphere';
 import { SIMPLE_SMOOTH_MATERIAL } from '@app/materials/material_solid';
 import { Point, point } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 
 /*
 test('point_at_pos() fuzzy test', ()=>{
@@ -28,7 +29,7 @@ test('point_at_pos() fuzzy test', ()=>{
 				p.v[j] = rnd & (1<<j) ? rnd_between(0.5,1.0) : rnd_between(0.0,0.5);
 
 			if (rnd == 0) {
-				let sp = p.scale(1/0.250);
+				let sp = vector.scale(p, 1/0.250);
 				rnd = (sp.x <<0) + (sp.y <<1) + (sp.z <<2);
 				expected_node = inner_tree;
 			}

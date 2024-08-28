@@ -16,7 +16,7 @@
 
 /** @file Complex number implementation */
 
-import { Vector, vector } from '@app/math/linalg'
+import * as vector from '@app/math/vector';
 
 export class Complex {
 	real: number;
@@ -38,7 +38,7 @@ export class Complex {
 	}
 
 	/** Convert a complex number to a 2D vector. */
-	to_vector(): Vector {
-		return vector(this.real,this.imag);
+	to_vector(): vector.Vector2 {
+		return vector.vector2(this.real,this.imag);
 	}
 }

@@ -17,6 +17,7 @@
 import { EntitySet, EntityOtree } from '@app/octree_entity';
 import { Ray } from '@app/raytracer';
 import { Point, point, IntersectionDirection } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 import { uv_map_sphere } from '@app/math/uv_mapping';
 import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
@@ -61,7 +62,7 @@ export class SphereEntity extends BasicEntity {
 		if (cross_point.length == 0)
 			return null;
 
-		const normal = cross_point[0].sub(this.pos).scale(2/this.diameter);
+		const normal = vector.scale(vector.sub(cross_point[0], this.pos), 2/this.diameter);
 		const coll_info = { point: cross_point[0], material: this.material, texture: this.texture, normal: normal };
 		return coll_info;
 	}
@@ -69,13 +70,13 @@ export class SphereEntity extends BasicEntity {
 	get_aabb(): [Point, number] {
 		const diameter = this.get_diameter();
 		return [
-			this.get_pos().sub(point(diameter, diameter, diameter).scale(0.5)),
+			vector.sub(this.get_pos(), vector.scale(point(diameter,diameter,diameter),0.5)),
 			diameter
 		]
 	}
 
 	map_uv(p: Point): [number, number] {
-		const dist = p.sub(this.pos);
-		return uv_map_sphere(dist);
+		const dist = vector.sub(p, this.pos);
+		return uv_map_sphere(<vector.Vector3> dist);
 	}
 }

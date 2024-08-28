@@ -1,4 +1,5 @@
 import { point } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 import { Camera, CameraConfig } from '@app/view/camera';
 
 const camera_conf: CameraConfig = { 
@@ -15,10 +16,10 @@ const camera = new Camera(camera_conf, point(0,0,0));
 
 function test_scanning(num: number) {
 	for (let px of camera.get_dir_for_each_pixel()) {
-		const ang_h = Math.atan2(px.dir.y, px.dir.x);
-		const ang_v = Math.atan2(px.dir.z, Math.sqrt(px.dir.y*px.dir.y  + px.dir.x*px.dir.x));
+		const ang_h = Math.atan2(px.dir.v[1], px.dir.v[0]);
+		const ang_v = Math.atan2(px.dir.v[2], Math.sqrt(px.dir.v[1]*px.dir.v[1]  + px.dir.v[0]*px.dir.v[0]));
 		//console.log(`${num}: x: ${px.x}, y: ${px.y}, ang_h: ${(ang_h * 180/Math.PI).toPrecision(4)}, ang_v: ${(ang_v * 180/Math.PI).toPrecision(4)}`);
-		expect(px.dir.length_sq()).toBeCloseTo(1.0);
+		expect(vector.length_sq(px.dir)).toBeCloseTo(1.0);
 	}
 }
 

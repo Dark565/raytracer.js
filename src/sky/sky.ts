@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Vector } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 import { Color } from '@app/physics/color';
 import { Texture } from '@app/texture/texture';
 
@@ -30,5 +30,5 @@ export abstract class Sky {
 		this.texture = texture;
 	}
 
-	abstract get_color(direction: Vector): Color;
+	abstract get_color(direction: vector.Vector): Color;
 };

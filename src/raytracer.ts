@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { Vector, Point, vector } from '@app/math/linalg';
+import { Vector, Point } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 import { clamp } from '@app/math/mathutils';
 import { EntitySet, new_entity_octree_walker, EntityOtree, EntityOtreeWalker, EntityOtreePos } from '@app/octree_entity';
 import { Entity, CollisionInfo } from '@app/entity';
@@ -42,7 +43,7 @@ const COLOR_WHITE = color(1,1,1);
 
 const COLOR_SKY = COLOR_BLACK;
 
-const VECTOR_ORTHO = vector(0,1);
+const VECTOR_ORTHO = vector.vector2(0,1);
 
 /* Ray description class */
 export class Ray {
@@ -55,7 +56,7 @@ export class Ray {
 	/** The last point of reflection or the start point of the ray */
 	private refpoint: Point;
 	/** Current direction of the ray */
-	private dir: Vector;
+	private dir: vector.Vector;
 	/** Current color of the ray; modulated by materials */
 	private color: Color;
 	/** The OctreeWalker assigned to the ray */
@@ -72,14 +73,14 @@ export class Ray {
 		this.tracer = rt;
 		this.refcount = 0;
 		this.refmax = refmax;
-		this.refpoint = start_point.clone();
+		this.refpoint = vector.clone(start_point);
 		this.color = clone_color(color);
 		this.walker = walker;
 		this.path_distance = 0;
 		if (!flags.keep_dir_unnormalized)
-			this.dir = dir.normalize();
+			this.dir = vector.normalize(dir);
 		else
-			this.dir = dir.clone();
+			this.dir = vector.clone(dir);
 
 		++Ray.debug_ray_count;
 	}
@@ -124,7 +125,7 @@ export class Ray {
 
 				collision_info = entity.collision_info(this);
 				/* TODO: Probably find a better way for getting rid of the previous collision point */
-				if (collision_info != undefined && !collision_info.point.near_equal(this.refpoint, 1e-5))
+				if (collision_info != undefined && !vector.near_equal(collision_info.point, this.refpoint, 1e-5))
 					break;
 			}
 
@@ -134,7 +135,7 @@ export class Ray {
 
 				this.refcount++;
 				collision_info.material.alter_ray(this, entity, collision_info.texture, collision_info.point);
-				this.path_distance += collision_info.point.sub(this.refpoint).length();
+				this.path_distance += vector.length(vector.sub(collision_info.point, this.refpoint));
 				this.refpoint = collision_info.point;
 				walker.start_point = this.refpoint;
 
@@ -152,7 +153,7 @@ export class Ray {
 					}
 
 					//this.dir = this.dir.rotate_axis(collision_info.normal, VECTOR_ORTHO).negate();
-					this.dir = this.dir.reflection(collision_info.normal);
+					this.dir = vector.reflection(this.dir, collision_info.normal);
 					walker.direction = this.dir;
 					break;
 				case material.ResponseType.REFRACTION:

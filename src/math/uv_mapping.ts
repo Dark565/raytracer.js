@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { Vector } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 
-export function uv_map_sphere(dir: Vector): [number,number] {
+export function uv_map_sphere(dir: vector.Vector3): [number,number] {
 		/* EPSILON is subtracted to ensure the resulting u,v are in range <-eps, 1) */
 		const u = Math.atan2(dir.v[1], dir.v[0])/Math.PI/2.0 + 0.5 - Number.EPSILON;
-		const v = Math.atan2(dir.v[2], dir.reduce(2).length())/Math.PI + 0.5 - Number.EPSILON;
+		const v = Math.atan2(dir.v[2], vector.length(vector.reduce(dir,2)))/Math.PI + 0.5 - Number.EPSILON;
 
 		return [u,v];
 }

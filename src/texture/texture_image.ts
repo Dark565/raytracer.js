@@ -46,7 +46,7 @@ export class ImageTexture extends Texture {
 		const width = this.width;
 		const height = this.height;
 
-		if (u < 0 - Number.EPSILON || u >= 1 - Number.EPSILON || v < 0 - Number.EPSILON || v > 1 - Number.EPSILON)
+		if (u < 0 - Number.EPSILON || u > 1 - Number.EPSILON || v < 0 - Number.EPSILON || v > 1 - Number.EPSILON)
 			throw Error('Texture coordinates out of bounds');
 
 		/* TODO: Other types of interpolation than nearest neighbor */

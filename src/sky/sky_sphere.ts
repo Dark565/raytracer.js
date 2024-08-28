@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { Vector } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 import { uv_map_sphere } from '@app/math/uv_mapping';
 import { Color } from '@app/physics/color';
 import { Sky } from '@app/sky/sky';
 
 export class SkySphere extends Sky {
-	get_color(dir: Vector): Color {
-		const [u,v] = uv_map_sphere(dir);
+	get_color(dir: vector.Vector): Color {
+		const [u,v] = uv_map_sphere(<vector.Vector3> dir);
 		return this.texture.get_color(u,v);
 	}
 }

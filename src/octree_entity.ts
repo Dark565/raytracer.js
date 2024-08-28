@@ -16,7 +16,8 @@
 
 /** @file Integration of entity with octree */
 
-import { vector, point } from '@app/math/linalg';
+import { point } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 import { Octree } from '@app/octree';
 import { SpaceOctree, OctreeWalker, OctreeDim, SpaceOctreePos, node_at_pos } from '@app/octree_space';
 import { Entity } from '@app/entity';
@@ -67,7 +68,7 @@ export function get_covering_node_for_entity(tree: EntityOtree, entity: Entity):
 	let cur_tree = deepest_node.tree;
 
 	do {
-		const space = {pos: cur_tree.id.pos, size: vector(1,1,1).scale(cur_tree.id.size)};
+		const space = {pos: cur_tree.id.pos, size: vector.scale(vector.vector(1,1,1), cur_tree.id.size)};
 		if (aabb_in_space(aabb_iface, space))
 			break;
 
@@ -94,8 +95,9 @@ function extend_tree_inside_to_fit_up_to_depth(root: EntityOtree, node: EntityOt
 	let cur_depth = node.get_relative_level(root);
 	let cur_node = node;
 	while (cur_depth < max_depth) {
-		const [x, y, z] = aabb.pos.sub(cur_node.id.pos).scale(2.0/cur_node.id.size).v.map(x => x << 0);
-		const space = {pos: cur_node.id.pos.add(vector(x,y,z).scale(cur_node.id.size/2)), size: vector(1,1,1).scale(cur_node.id.size/2)};
+		const [x, y, z] = vector.scale(vector.sub(aabb.pos, cur_node.id.pos), 2.0/cur_node.id.size).v.map(x => x << 0);
+		const space = {pos: vector.add(cur_node.id.pos, vector.scale(vector.vector(x,y,z), cur_node.id.size/2)),
+			             size: vector.scale(vector.vector(1,1,1), cur_node.id.size/2)};
 
 		if (!aabb_in_space(aabb, space))
 			break;
@@ -132,11 +134,11 @@ function extend_tree_outside_to_fit_up_to_depth(root: EntityOtree, node: EntityO
 		let fit_found = false;
 
 		while (cur_depth < max_depth) {
-			const aligned_aabb_node_pos = aabb.pos.sub(cur_node.id.pos).scale(1.0/cur_node.id.size);
+			const aligned_aabb_node_pos = vector.scale(vector.sub(aabb.pos, cur_node.id.pos), 1.0/cur_node.id.size);
 			for (let dim = 0; dim < 3; ++dim)
 				aligned_aabb_node_pos.v[dim] = clamp(Math.floor(aligned_aabb_node_pos.v[dim]), -1, 0); 
 
-			const parent_pos = cur_node.id.pos.add(aligned_aabb_node_pos.scale(cur_node.id.size));
+			const parent_pos = vector.add(cur_node.id.pos, vector.scale(aligned_aabb_node_pos, cur_node.id.size));
 			const parent_size = cur_node.id.size*2;
 			const cur_idx_within_parent = ((-aligned_aabb_node_pos.v[2]) << 2) |
 																	  ((-aligned_aabb_node_pos.v[1]) << 1) |
@@ -154,7 +156,7 @@ function extend_tree_outside_to_fit_up_to_depth(root: EntityOtree, node: EntityO
 
 			cur_node = new_parent;
 
-			if (aabb_in_space(aabb, { pos: parent_pos, size: vector(1,1,1).scale(parent_size) })) {
+			if (aabb_in_space(aabb, { pos: parent_pos, size: vector.scale(vector.vector(1,1,1), parent_size) })) {
 				fit_found = true;
 				break;
 			}

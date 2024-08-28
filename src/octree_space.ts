@@ -18,7 +18,8 @@
 
 import { Octree, Octant, OctreePos } from '@app/octree';
 import { NODE_ORDER_MAP, NODE_ORDERS } from '@app/octree_const';
-import { vector, Vector, Point, Plane, Line, IntersectionDirection } from '@app/math/linalg';
+import { Vector, Point, Plane, Line, IntersectionDirection } from '@app/math/linalg';
+import * as vector from '@app/math/vector';
 import * as space from '@app/space';
 
 /** The geometric dimensions of the octree.
@@ -46,18 +47,18 @@ export function node_at_pos<T>(octree: SpaceOctree<T>, pos: Point, flags: { star
 	if (!flags.start_from_current)
 		cur_node = cur_node.get_root();
 
-	if (!space.point_in_space(pos, {pos: dim.pos, size: vector(1,1,1).scale(dim.size)}))
+	if (!space.point_in_space(pos, {pos: dim.pos, size: vector.scale(vector.vector(1,1,1), dim.size)}))
 		return null;
 
 	let cur_index = 0;
-	let next_dim: OctreeDim = { pos: new Vector(dim.pos), size: dim.size };
+	let next_dim: OctreeDim = { pos: vector.clone(dim.pos), size: dim.size };
 	let next_node: SpaceOctant<T> = cur_node;
 
 	while (next_node instanceof Octree) {
-		let rel_pos = pos.sub(next_dim.pos);
-		let ind_vec = rel_pos.scale(2/next_dim.size);
+		let rel_pos = vector.sub(pos, next_dim.pos);
+		let ind_vec = vector.scale(rel_pos, 2/next_dim.size);
 		cur_node = next_node;
-		cur_index = (ind_vec.z <<2) + (ind_vec.y <<1) + (ind_vec.x <<0);
+		cur_index = (ind_vec.v[2] <<2) + (ind_vec.v[1] <<1) + (ind_vec.v[0] <<0);
 		next_node = cur_node.get(cur_index);
 		next_dim.size /= 2;
 		for (let i = 0; i < 3; i++)
@@ -76,7 +77,7 @@ export function new_subtree<T>(tree: SpaceOctree<T>, n: number, flags: { allow_r
 
 	const half_size = tree.id.size/2;
 	const subdim: OctreeDim = { 
-		pos: tree.id.pos.add(vector((n&1), ((n>>1)&1), ((n>>2)&1)).scale(half_size)),
+		pos: vector.add(tree.id.pos, vector.scale(vector.vector((n&1), ((n>>1)&1), ((n>>2)&1)), half_size)),
 		size: half_size
 	};
 
@@ -96,10 +97,10 @@ export function index_within_parent<T>(child: SpaceOctree<T>): number|null {
 	if (parent == null)
 		return null;
 
-	const rel_pos = child.id.pos.sub(parent.id.pos);
-	const ind_vec = rel_pos.scale(2/parent.id.size);
+	const rel_pos = vector.sub(child.id.pos, parent.id.pos);
+	const ind_vec = vector.scale(rel_pos, 2/parent.id.size);
 
-	return (ind_vec.z <<2) + (ind_vec.y <<1) + (ind_vec.x <<0);
+	return (ind_vec.v[2] <<2) + (ind_vec.v[1] <<1) + (ind_vec.v[0] <<0);
 }
 
 /** The output of the OctreeWalker's next() method */
@@ -172,7 +173,7 @@ export class OctreeWalker<T> {
 		this.cursor.direction = dir;
 		if (dir != undefined) {
 			const dir_prepare_fns = [OctreeWalker.order_prepare_default, OctreeWalker.order_prepare_reverse];
-			this.cursor.order_prepare_fn = dir_prepare_fns[Number(dir.z < 0) | Number(dir.y < 0)];
+			this.cursor.order_prepare_fn = dir_prepare_fns[Number(dir.v[2] < 0) | Number(dir.v[1] < 0)];
 		}
 	}
 
@@ -331,14 +332,14 @@ export class OctreeWalker<T> {
 	private setup_order() {
 		const tree = this.cursor.tree;
 		const half_size = tree.id.size/2;
-		const mid_point = tree.id.pos.add(vector(half_size, half_size, half_size));
+		const mid_point = vector.add(tree.id.pos, vector.vector(half_size, half_size, half_size));
 		const line: Line = { start: this.cursor.start_point, dir: this.cursor.direction };
 
 		let logic_vec = 0;
 
 		for (const [i,x] of OctreeWalker.PLANE_PAIRS.entries()) {
 			const axis_bit = 1<<i;
-			const plane = new Plane(vector(axis_bit&1, axis_bit&2, axis_bit&4), mid_point, { assume_normalized: true });
+			const plane = new Plane(vector.vector(axis_bit&1, axis_bit&2, axis_bit&4), mid_point, { assume_normalized: true });
 			const cross_point = plane.line_intersection(line, { allow_infinity: true, intersection_direction: IntersectionDirection.BOTH });
 			/* console.log(`line.dir.norm(): ${line.dir.normalize().v}`); */
 			//console.log(`cross_point: ${cross_point[0].v}`);
