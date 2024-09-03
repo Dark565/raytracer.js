@@ -165,6 +165,11 @@ export class OctreeWalker<T> {
 		this.cursor.start_point = point;
 	}
 
+	set_start_point(point: Point, node: SpaceOctreePos<T>) {
+		this.go_to_point(point, node);
+		this.cursor.start_point = point;
+	}
+
 	private static order_prepare_default(ord: number[]): number[] { /* console.log("setting default order"); */ return ord; }
 	private static order_prepare_reverse(ord: number[]): number[] { /* console.log("setting reverse order"); */ return ord.reverse(); }
 
@@ -235,13 +240,18 @@ export class OctreeWalker<T> {
 
 	/** Sets the current walker position to the subtree and node covering the specified point.
 	 *  If the point is out of the tree, the posision is set to the outermost tree and undefined node.
-	 *  This function automatically deprecates the cursor logic and the stack. */
-	go_to_point(point: Point): boolean {
+	 *  This function automatically deprecates the cursor logic and the stack.
+	 *  @arg point The point to go.
+	 *  @arg node Optional. If it is used as an optimization to avoid node finding at the specified point.
+	 *             The node is **expected** to match the specified point! */
+	go_to_point(point: Point, node?: SpaceOctreePos<T>): boolean {
 		let pos_node: SpaceOctreePos<T> = undefined;
 		/* Try the tree at the cursor first to optimize traversal out */
-		for (let tree of [this.cursor.tree, this.tree]) {
-			if (tree != undefined) {
-				pos_node = node_at_pos(tree, point);
+		if (node != undefined) {
+			pos_node = node;
+		} else {
+			for (let start_from_current of [true, false]) {
+				pos_node = node_at_pos(this.tree, point, { start_from_current: start_from_current });
 				if (pos_node != undefined)
 					break;
 			}
@@ -328,38 +338,39 @@ export class OctreeWalker<T> {
 
 	private static PLANE_PAIRS = [[1,2],[0,2],[0,1]];
 
+	public static profile_times = [0,0,0];
+
 	/* FIXME: Kinda working, but still have to implement a proper handling of the middle cross situation */
 	private setup_order() {
 		const tree = this.cursor.tree;
 		const half_size = tree.id.size/2;
+		const half_size_negative = -half_size;
 		const mid_point = vector.add(tree.id.pos, vector.vector(half_size, half_size, half_size));
 		const line: Line = { start: this.cursor.start_point, dir: this.cursor.direction };
 
 		let logic_vec = 0;
 
-		for (const [i,x] of OctreeWalker.PLANE_PAIRS.entries()) {
-			const axis_bit = 1<<i;
+		const fill_logic_vec_for_planes = (axis1: number, axis2: number, plane_i: number) => {
+			const axis_bit = 1<<plane_i;
 			const plane = new Plane(vector.vector(axis_bit&1, axis_bit&2, axis_bit&4), mid_point, { assume_normalized: true });
 			const cross_point = plane.line_intersection(line, { allow_infinity: true, intersection_direction: IntersectionDirection.BOTH });
-			/* console.log(`line.dir.norm(): ${line.dir.normalize().v}`); */
-			//console.log(`cross_point: ${cross_point[0].v}`);
-			//console.log(`mid_point: ${mid_point.v}`);
-			const a1_ae_middle = (cross_point[0].v[x[0]] >= mid_point.v[x[0]]);
-			const a2_ae_middle = (cross_point[0].v[x[1]] >= mid_point.v[x[1]]);
-			const a1_of = (Math.abs(cross_point[0].v[x[0]] - mid_point.v[x[0]]) > half_size);
-			const a2_of = (Math.abs(cross_point[0].v[x[1]] - mid_point.v[x[1]]) > half_size);
 
-			//console.log(`(Math.abs(cross_point[0].v[x[0]] - mid_point.v[x[0]])): ${(Math.abs(cross_point[0].v[x[0]] - mid_point.v[x[0]]))}`);
-			//console.log(`(Math.abs(cross_point[0].v[x[1]] - mid_point.v[x[1]])): ${(Math.abs(cross_point[0].v[x[1]] - mid_point.v[x[1]]))}`);
-			//console.log(`half_size: ${half_size}`);
-			//console.log(`cross_point[0].v[x[0]]: ${cross_point[0].v[x[0]]}`);
-			//console.log(`cross_point[0].v[x[1]]: ${cross_point[0].v[x[1]]}`);
+			const probe_point = cross_point[0];
+			const axis1_mid_dist = probe_point.v[axis1] - mid_point.v[axis1];
+			const axis2_mid_dist = probe_point.v[axis2] - mid_point.v[axis2];
 
-			logic_vec |= (Number(a1_ae_middle) | (Number(a2_ae_middle) << 1)) << (i << 1);
-			logic_vec |= Number(a1_of || a2_of) << (6 + i);
-			/* console.log((Number(a1_ae_middle) | Number(a2_ae_middle)<<1).toString(2).padStart(2,'0')); */
-			/* console.log(logic_vec.toString(2).padStart(9, '0')); */
-		};
+			const a1_ae_middle = axis1_mid_dist >= 0;
+			const a2_ae_middle = axis2_mid_dist >= 0;
+			const a1_of = (axis1_mid_dist > half_size || axis1_mid_dist < half_size_negative);
+			const a2_of = (axis2_mid_dist > half_size || axis2_mid_dist < half_size_negative);
+
+			logic_vec |= (Number(a1_ae_middle) | (Number(a2_ae_middle) << 1)) << (plane_i << 1);
+			logic_vec |= Number(a1_of || a2_of) << (6 + plane_i);
+		}
+
+		fill_logic_vec_for_planes(1, 2, 0);
+		fill_logic_vec_for_planes(0, 2, 1);
+		fill_logic_vec_for_planes(0, 1, 2);
 
 		const order_index = Number((NODE_ORDER_MAP >> BigInt(logic_vec << 1)) & BigInt(0x3));
 		let order_sequence = this.cursor.order_prepare_fn(NODE_ORDERS[order_index].slice());

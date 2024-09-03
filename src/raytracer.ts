@@ -19,6 +19,7 @@ import * as vector from '@app/math/vector';
 import { clamp } from '@app/math/mathutils';
 import { EntitySet, new_entity_octree_walker, EntityOtree, EntityOtreeWalker, EntityOtreePos } from '@app/octree_entity';
 import { Entity, CollisionInfo } from '@app/entity';
+import { node_at_pos } from '@app/octree_space';
 import { Sky } from '@app/sky/sky';
 import { Color, color, clone_color, mul_color, clamp_color } from '@app/physics/color';
 import * as material from '@app/material';
@@ -55,6 +56,8 @@ export class Ray {
 	private refmax: number;
 	/** The last point of reflection or the start point of the ray */
 	private refpoint: Point;
+	/** The node at the start point */
+	private startnode?: EntityOtreePos;
 	/** Current direction of the ray */
 	private dir: vector.Vector;
 	/** Current color of the ray; modulated by materials */
@@ -66,14 +69,15 @@ export class Ray {
 
 	private static debug_ray_count = 0;
 
-	constructor(rt: Raytracer, refmax: number, start_point: Point, dir: Vector,
-							color: Color, walker: EntityOtreeWalker,
-							flags: { keep_dir_unnormalized?: boolean } = {}) 
+	constructor(rt: Raytracer, refmax: number, start_point: Point,
+							start_node: EntityOtreePos|undefined, dir: Vector,
+							color: Color, walker: EntityOtreeWalker, flags: { keep_dir_unnormalized?: boolean } = {})
 	{
 		this.tracer = rt;
 		this.refcount = 0;
 		this.refmax = refmax;
 		this.refpoint = vector.clone(start_point);
+		this.startnode = start_node;
 		this.color = clone_color(color);
 		this.walker = walker;
 		this.path_distance = 0;
@@ -107,7 +111,8 @@ export class Ray {
 		//console.log(`${Ray.debug_ray_count}: called trace()`);
 		const walker = this.walker;
 		walker.direction = this.dir;
-		walker.start_point = (this.refpoint);
+		walker.set_start_point(this.refpoint, this.startnode);
+		//walker.start_point = (this.refpoint);
 		let tree_node: ReturnType<typeof walker.next>;
 		let last_entity: Entity = undefined;
 		let light_hit = false;
@@ -187,6 +192,7 @@ export class Ray {
 
 /** Main raytracer class */
 export class Raytracer {
+	private otree: EntityOtree;
 	private walker: EntityOtreeWalker;
 	private camera: Camera;
 	private screen: Screen;
@@ -196,6 +202,7 @@ export class Raytracer {
 	constructor(config: RaytracerConfig, otree: EntityOtree, camera: Camera, screen: Screen) {
 		this.camera = camera;
 		this.screen = screen;
+		this.otree = otree;
 		this.walker = new_entity_octree_walker(otree);
 		this.config = Object.assign({}, config);
 	}
@@ -209,9 +216,12 @@ export class Raytracer {
 	}
 
 	trace_frame() {
+		const start_pos = this.camera.get_pos();
+		const start_node = node_at_pos(this.otree, start_pos);
+
 		for (let campx of this.camera.get_dir_for_each_pixel()) {
-			const ray = new Ray(this, this.config.refmax, this.camera.get_pos(), campx.dir, COLOR_WHITE,
-													this.walker, { keep_dir_unnormalized: true });
+			const ray = new Ray(this, this.config.refmax, start_pos, start_node, campx.dir,
+													COLOR_WHITE, this.walker, { keep_dir_unnormalized: true });
 
 			ray.trace();
 			const color = ray.get_color();
