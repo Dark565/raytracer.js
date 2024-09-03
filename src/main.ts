@@ -33,10 +33,13 @@ import { BoxEntity } from '@app/entities/entity_box';
 import { Raytracer, RaytracerConfig } from '@app/raytracer';
 import { Camera, CameraConfig } from '@app/view/camera';
 import { CanvasScreen } from '@app/view/screen_canvas';
+import { PRNG } from '@app/math/prng/prng';
+import { FpLcg } from '@app/math/prng/fp-lcg';
 
 const CANVAS_ID = 'rtcanvas';
 const STATS_DIV_ID = 'rtstats';
 const REFMAX = 6;
+const RANDOM_SEED = 42;
 
 const TEXTURE_URLS: [string,boolean,boolean][] = 
 	[['assets/texture1.jpg', false, false],
@@ -48,34 +51,34 @@ function load_textures(): Texture[] {
 }
 
 // Return a random color vector from the RGB color space with a specific magnitude (intensity)
-function get_random_color_with_intensity(intensity: number): Color {
-	const [r,g,b] = Array(3).fill(0).map(()=>Math.random());
+function get_random_color_with_intensity(prng: PRNG, intensity: number): Color {
+	const [r,g,b] = Array(3).fill(0).map(()=>prng.next());
 	const col_vec = vector.scale_self(vector.normalize_self(vector.vector(r,g,b)), intensity);
 	return { r: col_vec.v[0], g: col_vec.v[1], b: col_vec.v[2], a: 1.0 };
 }
 
 /* Return a random image texture or a new solid color one */
-function get_random_texture(img_txt_prob: number, img_textures: Texture[]) {
-	const rnd = Math.random();
+function get_random_texture(prng: PRNG, img_txt_prob: number, img_textures: Texture[]) {
+	const rnd = prng.next();
 	if (rnd <= img_txt_prob) { // get image texture
-		const txt_i = (Math.random() * img_textures.length) << 0;
+		const txt_i = (prng.next() * img_textures.length) << 0;
 		return img_textures[txt_i];
 	} else {
-		const rand_color = get_random_color_with_intensity(1.0);
+		const rand_color = get_random_color_with_intensity(prng, 1.0);
 		return new SolidTexture(rand_color);
 	}
 }
 
-function generate_some_aligned_entities(tree: EntityOtree, n_entities: number, img_txt_prob: number, light_prob: number, img_textures: Texture[]) {
+function generate_some_aligned_entities(tree: EntityOtree, prng: PRNG, n_entities: number, img_txt_prob: number, light_prob: number, img_textures: Texture[]) {
 	const entity_classes = [SphereEntity, BoxEntity];
 
 	let existing_points: Point[] = [];
 
 	for (let i = 0; i < n_entities; i++) {
-		const level = 1 + Math.floor(Math.random() * 2);
+		const level = 1 + Math.floor(prng.next() * 2);
 		const n_quant = 1 << (level);
 		const size = 1 / n_quant;
-		const [x, y, z] = [0,0,0].map(_ => { return ((Math.random() * n_quant) << 0) * size + size/2 });
+		const [x, y, z] = [0,0,0].map(_ => { return ((prng.next() * n_quant) << 0) * size + size/2 });
 		const e_point = point(x,y,z);
 		let already_existing = false;
 		for (let p of existing_points) {
@@ -88,21 +91,28 @@ function generate_some_aligned_entities(tree: EntityOtree, n_entities: number, i
 		if (already_existing)
 			continue;
 
-		const is_light = Math.random() <= light_prob;
+		const is_light = prng.next() <= light_prob;
 
-		const texture = get_random_texture(is_light ? 0 : img_txt_prob, img_textures);
+		const texture = get_random_texture(prng, is_light ? 0 : img_txt_prob, img_textures);
 		console.log(`${x}, ${y}, ${z}   ${size}`);
 		const entity = new SphereEntity(undefined, is_light ? SIMPLE_LIGHT_MATERIAL : SIMPLE_SMOOTH_MATERIAL, texture, point(x,y,z), size);
-		entity.set_octree(tree);
-		tree.value.set.add(entity);
-		//add_entity_to_octree(tree, entity, { max_in_depth: 16, max_out_depth: 4 });
+		//entity.set_octree(tree);
+		//tree.value.set.add(entity);
+		add_entity_to_octree(tree, entity, { max_in_depth: 16, max_out_depth: 4 });
 	}
 	//add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.5,0.5,0.5), 1), { max_in_depth: 5, max_out_depth: 5 });
 	//add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.76,0.5,0.5), 0.5), { max_in_depth: 5, max_out_depth: 5 });
 	//add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.77,0.5,0.5), 0.5), { max_in_depth: 5, max_out_depth: 5 });
 }
 
+function obtain_seed_from_url_param(): number {
+	const search = new URLSearchParams(window.location.search);
+	return Number(search.get('seed'));
+}
+
 interface PlayerInterfaceConfig {
+	fps_mean_window_size: number;
+
 	move_forward: number;
 	move_back:    number;
 	move_left:    number;
@@ -119,7 +129,10 @@ class PlayerInterface {
 	reset_pos: Point;
 	camera: Camera;
 	tick_handler: ()=>void;
+	fps_samples: number[] = [];
+	fps_mean: number = 0; // sma(window_size)
 
+f
 	constructor(config: PlayerInterfaceConfig, canvas_elem: HTMLElement, stat_elem: HTMLDivElement, camera: Camera, reset_pos: Point, tick_handler: ()=>void) {
 		this.config = config;
 		this.canvas_elem = canvas_elem;
@@ -162,7 +175,30 @@ class PlayerInterface {
 			<h2>Camera</h2>
 			pos: ${pos.v.map((x)=>x.toPrecision(4))}<br>
 			direction: ${fr_vec.v.map((x)=>x.toPrecision(4))}<br>
-			- angles: ${angle_deg_x.toPrecision(4)}°, ${angle_deg_y.toPrecision(4)}°`
+			- angles: ${angle_deg_x.toPrecision(4)}°, ${angle_deg_y.toPrecision(4)}°<br><br>
+
+			fps: ${(this.fps_samples[this.fps_samples.length-1] ?? 0).toPrecision(4)}<br>
+			- σ(${this.config.fps_mean_window_size}): ${this.fps_mean}`
+	}
+
+
+	private update_fps(fps: number) {
+		if (this.fps_samples.length >= this.config.fps_mean_window_size) {
+			const threw = this.fps_samples.shift();
+			this.fps_mean -= threw/this.config.fps_mean_window_size;
+		}
+
+		this.fps_mean += fps/this.config.fps_mean_window_size;
+		this.fps_samples.push(fps);
+	}
+
+	private tick() {
+		const time_start = performance.now();
+		this.tick_handler();
+		const time_end = performance.now();
+
+		// performance.now() returns time in milliseconds
+		this.update_fps(1000 / (time_end - time_start));
 	}
 
 	/* Rotate the camera on mouse move and run the tick handler */
@@ -186,8 +222,8 @@ class PlayerInterface {
 		this.camera.rotate_h_step(delta_x);
 		this.camera.rotate_v_step(delta_y);
 
+		this.tick();
 		this.update_stats();
-		this.tick_handler();
 
 		//this.last_mouse_pos = { x: ev.screenX, y: ev.screenY }
 	}
@@ -221,8 +257,8 @@ class PlayerInterface {
 			}
 		}
 
+		this.tick();
 		this.update_stats();
-		this.tick_handler();
 	}
 }
 
@@ -234,6 +270,8 @@ async function main() {
 	const stat_div = document.getElementById(STATS_DIV_ID) as HTMLDivElement;
 	if (stat_div == undefined)
 		console.log(`${STATS_DIV_ID} element not found. Statistics will not be shown`);
+
+	const prng = new FpLcg(obtain_seed_from_url_param() ?? RANDOM_SEED);
 
 	const camera_conf: CameraConfig = {
 		fov_v: Math.PI*0.75,
@@ -269,7 +307,7 @@ async function main() {
 
 	console.log("textures loaded");
 
-	generate_some_aligned_entities(otree, 3, 0.75, 0.5, textures);
+	generate_some_aligned_entities(otree, prng, 3, 0.75, 0.5, textures);
 	const sky = new SkySphere(sky_txt);
 
 	const raytracer_conf: RaytracerConfig = {
@@ -286,6 +324,7 @@ async function main() {
 
 	const move_dist = 1e-1;
 	const player_iface_conf: PlayerInterfaceConfig = {
+		fps_mean_window_size: 32,
 		move_forward: move_dist,
 		move_back: move_dist,
 		move_left: move_dist,
