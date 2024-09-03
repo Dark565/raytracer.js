@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Point } from '@app/math/linalg';
+import { Point } from '@app/math/geometry';
 import { Ray } from '@app/raytracer';
 import { Entity } from '@app/entity';
 import { Texture } from '@app/texture/texture';

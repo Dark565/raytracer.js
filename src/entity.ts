@@ -17,7 +17,7 @@
 /** @file Definitions of data structures used for describing scene entities. */
 
 import { EntityOtree } from '@app/octree_entity';
-import { Point, Vector } from '@app/math/linalg';
+import { Point, Vector } from '@app/math/geometry';
 import { Ray } from '@app/raytracer';
 import { Material } from '@app/material'
 import { Texture } from '@app/texture/texture';

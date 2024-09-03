@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Vector, Point } from '@app/math/linalg';
+import { Vector, Point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 import { clamp } from '@app/math/mathutils';
 import { EntitySet, new_entity_octree_walker, EntityOtree, EntityOtreeWalker, EntityOtreePos } from '@app/octree_entity';

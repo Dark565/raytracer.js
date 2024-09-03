@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Point, Vector } from '@app/math/linalg';
+import { Point, Vector } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 
 export interface CameraPixel {

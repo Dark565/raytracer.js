@@ -5,7 +5,7 @@ import * as material from '@app/material';
 import { SolidTexture } from '@app/texture/texture_solid';
 import { SphereEntity } from '@app/entities/entity_sphere';
 import { SIMPLE_SMOOTH_MATERIAL } from '@app/materials/material_solid';
-import { Point, point } from '@app/math/linalg';
+import { Point, point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 
 /*

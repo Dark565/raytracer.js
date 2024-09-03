@@ -18,7 +18,8 @@
 
 import { Octree, Octant, OctreePos } from '@app/octree';
 import { NODE_ORDER_MAP, NODE_ORDERS } from '@app/octree_const';
-import { Vector, Point, Plane, Line, IntersectionDirection } from '@app/math/linalg';
+import { Vector, Point, Line } from '@app/math/geometry';
+import { Plane, IntersectionDirection } from '@app/math/intersection';
 import * as vector from '@app/math/vector';
 import * as space from '@app/space';
 

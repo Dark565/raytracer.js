@@ -1,6 +1,6 @@
 import { Octree } from '@app/octree';
 import * as space from '@app/octree_space';
-import { point } from '@app/math/linalg';
+import { point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 
 test('point_at_pos() fuzzy test', ()=>{

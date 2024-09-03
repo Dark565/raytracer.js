@@ -16,7 +16,7 @@
 
 /** @file Integration of entity with octree */
 
-import { point } from '@app/math/linalg';
+import { point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 import { Octree } from '@app/octree';
 import { SpaceOctree, OctreeWalker, OctreeDim, SpaceOctreePos, node_at_pos } from '@app/octree_space';

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Vector, Point, point } from '@app/math/linalg';
+import { Vector, Point, point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 import { Color } from '@app/physics/color';
 import { clamp } from '@app/math/mathutils';

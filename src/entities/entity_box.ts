@@ -16,18 +16,18 @@
 
 import { EntitySet, EntityOtree } from '@app/octree_entity';
 import { Ray } from '@app/raytracer';
-import { Point, Vector, point } from '@app/math/linalg';
+import { Point, Vector, point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 import { point_in_space } from '@app/space'; 
 import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
 import { Material } from '@app/material';
 import { Texture } from '@app/texture/texture';
-import * as linalg from '@app/math/linalg';
+import { Plane } from '@app/math/intersection';
 
 export class BoxEntity extends BasicEntity {
 	private size: number;
-	private face_cache: [Point, linalg.Plane][];
+	private face_cache: [Point, Plane][];
 
 	constructor(entity_otree: EntityOtree, material: Material, texture: Texture, pos: Point, size: number) {
 		super(entity_otree, material, texture, pos);
@@ -127,6 +127,6 @@ export class BoxEntity extends BasicEntity {
 
 	private cache_faces() {
 		const faces = this.get_faces();
-		this.face_cache = faces.map((fc) => [fc[0], new linalg.Plane(fc[1], fc[0], { assume_normalized: true })]);
+		this.face_cache = faces.map((fc) => [fc[0], new Plane(fc[1], fc[0], { assume_normalized: true })]);
 	}
 }

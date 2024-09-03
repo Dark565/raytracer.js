@@ -1,4 +1,4 @@
-import { point } from '@app/math/linalg';
+import { point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 import { Camera, CameraConfig } from '@app/view/camera';
 

@@ -14,16 +14,8 @@
  * limitations under the License.
  */
 
+import { Point, Vector, Line } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
-
-export type Vector = vector.Vector;
-export type Point = Vector;
-export var point = vector.vector;
-
-export interface Line {
-	start: Point;
-	dir: Vector;
-}
 
 export enum IntersectionDirection {
 	BOTH,
@@ -41,7 +33,7 @@ export interface IntersectionFlags {
 	intersection_direction?: IntersectionDirection
 }
 
-export interface Entity {
+export interface Intersectable {
 	line_intersection(line: Line, flags: IntersectionFlags): Vector[];
 }
 
@@ -51,8 +43,29 @@ export interface Entity {
 //		     v1.v[1] * v2.v[1] +
 //				 v1.v[2] * v2.v[2];
 //}
+//
 
-export class Plane implements Entity {
+/** Select intersection points according to flags.intersection_direction. */
+function select_intersection_points2(line: Line, t1: number, t2: number, flags: IntersectionFlags): Vector[] {
+		const sp_dir = flags.intersection_direction ?? IntersectionDirection.BOTH;
+		const cr1 = vector.add(line.start, vector.scale(line.dir, t1));
+		const cr2 = vector.add(line.start, vector.scale(line.dir, t2));
+
+		const a_cr1_cr2 = [cr1,cr2];
+		const a_cr2_cr1 = [cr2,cr1];
+		const a_cr2 = [cr2];
+
+		const res_matrix = [
+				a_cr1_cr2, a_cr1_cr2, a_cr1_cr2, a_cr1_cr2,
+				[],        [],        a_cr2,     a_cr1_cr2,
+				a_cr2_cr1, [],        a_cr1_cr2, []
+		];
+
+		const lut_col_idx = (Number(t2 >= 0) << 1) | Number(t1 >= 0);
+		return res_matrix[sp_dir * 4 + lut_col_idx];
+}
+
+export class Plane implements Intersectable {
 	normal: Vector;
 	pos: Vector;
 	constructor(normal: Vector, pos: Vector, flags: { assume_normalized?: boolean } = {}) {
@@ -88,7 +101,7 @@ export class Plane implements Entity {
 	}
 }
 
-export class Sphere implements Entity {
+export class Sphere implements Intersectable {
 	/* cache */
 	private _dot_pp: number;
 	private _radius_sq: number;
@@ -125,42 +138,24 @@ export class Sphere implements Entity {
 		return this._radius;
 	}
 
- line_intersection(line: Line, flags: IntersectionFlags = {}): Vector[] {
-	const sp_dir = flags.intersection_direction ?? IntersectionDirection.BOTH;
-	const dist = vector.sub(line.start, this.pos);
-	const a = vector.dot(line.dir, line.dir);
-	const b = vector.dot(dist, line.dir)*2;
-	const c = vector.dot(line.start, line.start) + this._dot_pp -
-		        vector.dot(line.start, this.pos)*2 - this._radius_sq;
+	line_intersection(line: Line, flags: IntersectionFlags = {}): Vector[] {
+		const dist = vector.sub(line.start, this.pos);
+		const a = vector.dot(line.dir, line.dir);
+		const b = vector.dot(dist, line.dir)*2;
+		const c = vector.dot(line.start, line.start) + this._dot_pp -
+							vector.dot(line.start, this.pos)*2 - this._radius_sq;
 
-	const delta = b*b - a*c*4;
-	if (delta < 0)
-		return [];
+		const delta = b*b - a*c*4;
+		if (delta < 0)
+			return [];
 
-	//console.log(`sqhere intersected`)
-	let s_delta = Math.sqrt(delta);
-	let tmp1 = -b / (a*2);
-	let tmp2 = s_delta / (a*2);
-	let t1 = tmp1 - tmp2;
-	let t2 = tmp1 + tmp2;
+		//console.log(`sqhere intersected`)
+		let s_delta = Math.sqrt(delta);
+		let tmp1 = -b / (a*2);
+		let tmp2 = s_delta / (a*2);
+		let t1 = tmp1 - tmp2;
+		let t2 = tmp1 + tmp2;
 
-	const p1 = vector.add(line.start, vector.scale(line.dir, t1));
-	const p2 = vector.add(line.start, vector.scale(line.dir, t2));
-
-	// -- aggresive optimization by using LUT
-	
-	const a_p1_p2 = [p1,p2];
-	const a_p2_p1 = [p2,p1];
-	const a_p2 = [p2];
-
-	const res_matrix = [
-		  a_p1_p2, a_p1_p2, a_p1_p2, a_p1_p2,
-		  [],      [],      a_p2,    a_p1_p2,
-		  a_p2_p1, [],      a_p1_p2, []
-	]
-
-	const lut_col_idx = (Number(t2 >= 0) << 1) | Number(t1 >= 0);
-	return res_matrix[sp_dir * 4 + lut_col_idx];
- }
+		return select_intersection_points2(line, t1, t2, flags);
+	}
 }
-

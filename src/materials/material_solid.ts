@@ -2,7 +2,7 @@ import { StaticMaterial, ResponseType } from '@app/material';
 import { Color, clone_color, mul_color } from '@app/physics/color';
 import { Entity } from '@app/entity';
 import { Ray } from '@app/raytracer';
-import { Point } from '@app/math/linalg';
+import { Point } from '@app/math/geometry';
 import { Texture } from '@app/texture/texture';
 
 /** Solid color material */

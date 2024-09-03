@@ -86,16 +86,16 @@ export function dot(v1: Vector, v2: Vector) {
 }
 
 export function cross(v1: Vector3, v2: Vector3): Vector3 {
-	const res = <Vector3> new_empty_sized(size(v1));
+	const res = { v: [] };
 	res.v[0] = v1.v[1]*v2.v[2] - v1.v[2]*v2.v[1];
 	res.v[1] = v1.v[2]*v2.v[0] - v1.v[0]*v2.v[2];
 	res.v[2] = v1.v[0]*v2.v[1] - v1.v[1]*v2.v[0];
-	return res;
+	return <Vector3> res;
 }
 
 export function hadamard(v1: Vector, v2: Vector): Vector {
 	assert_compatibility(v1, v2);
-	const res = new_empty_sized(size(v1));
+	const res = { v: [] };
 	for (let i=0; i < size(v1); i++)
 		res.v[i] = v1.v[i] * v2.v[i];
 
@@ -105,7 +105,7 @@ export function hadamard(v1: Vector, v2: Vector): Vector {
 export function add(v1: Vector, v2: Vector): Vector {
 	assert_compatibility(v1, v2);
 	const sz = size(v1);
-	const res = new_empty_sized(sz);
+	const res = { v: [] };
 	for (let i=0; i < sz; i++) {
 		res.v[i] = v1.v[i] + v2.v[i];
 	}
@@ -115,7 +115,7 @@ export function add(v1: Vector, v2: Vector): Vector {
 export function sub(v1: Vector, v2: Vector): Vector {
 	assert_compatibility(v1, v2);
 	const sz = size(v1);
-	const res = new_empty_sized(sz);
+	const res = { v: [] };
 	for (let i=0; i < sz; i++) {
 		res.v[i] = v1.v[i] - v2.v[i];
 	}
@@ -124,7 +124,7 @@ export function sub(v1: Vector, v2: Vector): Vector {
 
 export function scale(v: Vector, scalar: number): Vector {
 	const sz = size(v);
-	const res = new_empty_sized(sz);
+	const res = { v: [] };
 	for (let i=0; i < sz; ++i) {
 		res.v[i] = v.v[i] * scalar;
 	}
@@ -133,7 +133,7 @@ export function scale(v: Vector, scalar: number): Vector {
 
 export function negate(v: Vector): Vector {
 	const sz = size(v);
-	const res = new_empty_sized(sz);
+	const res = { v: [] };
 	for (let i=0; i < sz; ++i) {
 		res.v[i] = -v.v[i];
 	}
@@ -314,4 +314,13 @@ export function rotate_vectors(base_x: Vector, base_y: Vector, rot_vec: Vector2)
 		add(scale(base_x, rot_vec.v[0]), scale(base_y, rot_vec.v[1])),
 		add(scale(base_x, -rot_vec.v[1]), scale(base_y, rot_vec.v[0]))
 	];
+}
+
+/* Miscallenous functions for potential optimization */
+export function vector_zeros2(): Vector {
+	return { v: [0,0] }
+}
+
+export function vector_zeros3(): Vector {
+	return { v: [0,0,0] };
 }

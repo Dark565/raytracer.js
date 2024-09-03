@@ -16,23 +16,23 @@
 
 import { EntitySet, EntityOtree } from '@app/octree_entity';
 import { Ray } from '@app/raytracer';
-import { Point, point, IntersectionDirection } from '@app/math/linalg';
+import { Point, point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 import { uv_map_sphere } from '@app/math/uv_mapping';
 import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
 import { Material } from '@app/material';
 import { Texture } from '@app/texture/texture';
-import * as linalg from '@app/math/linalg';
+import { Sphere, IntersectionDirection } from '@app/math/intersection';
 
 export class SphereEntity extends BasicEntity {
 	private diameter: number;
-	private sphere_math: linalg.Sphere;
+	private sphere_math: Sphere;
 
 	constructor(entity_otree: EntityOtree, material: Material, texture: Texture, pos: Point, diameter: number) {
 		super(entity_otree, material, texture, pos);
 		this.diameter = diameter;
-		this.sphere_math = new linalg.Sphere(this.pos, this.diameter/2);
+		this.sphere_math = new Sphere(this.pos, this.diameter/2);
 	}
 
 	get_diameter(): number {

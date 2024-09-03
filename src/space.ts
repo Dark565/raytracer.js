@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Point, Vector, point } from '@app/math/linalg';
+import { Point, Vector, point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 
 /* TODO: Add a variadic number parameter to the Vector class for denoting its size

@@ -16,7 +16,7 @@
 
 import { EntityOtree } from '@app/octree_entity';
 import { Entity } from '@app/entity';
-import { Point } from '@app/math/linalg';
+import { Point } from '@app/math/geometry';
 import { Material } from '@app/material'
 import { Texture } from '@app/texture/texture';
 
