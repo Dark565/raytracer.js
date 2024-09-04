@@ -17,6 +17,8 @@
 import { Point, Vector, Line } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 
+/* TODO: Take the intersection checking function outside of class */
+
 export enum IntersectionDirection {
 	BOTH,
 	FORWARD,
@@ -33,23 +35,29 @@ export interface IntersectionFlags {
 	intersection_direction?: IntersectionDirection
 }
 
-export interface Intersectable {
-	line_intersection(line: Line, flags: IntersectionFlags): Vector[];
+export interface IntersectionInfo {
+	point: Point;
 }
 
-// fast dot
-//function dot3(v1: Vector, v2: Vector) {
-//	return v1.v[0] * v2.v[0] +
-//		     v1.v[1] * v2.v[1] +
-//				 v1.v[2] * v2.v[2];
-//}
-//
+export interface IntersectionInfoWithNormal extends IntersectionInfo {
+	normal: Vector;
+}
+
+export interface Intersectable {
+	line_intersection(line: Line, flags: IntersectionFlags): IntersectionInfo[];
+}
 
 /** Select intersection points according to flags.intersection_direction. */
-function select_intersection_points2(line: Line, t1: number, t2: number, flags: IntersectionFlags): Vector[] {
+function select_intersection_points2(line: Line, t1: number, t2: number, flags: IntersectionFlags,
+																		i1?: IntersectionInfo, i2?: IntersectionInfo): IntersectionInfo[] {
+
 		const sp_dir = flags.intersection_direction ?? IntersectionDirection.BOTH;
-		const cr1 = vector.add(line.start, vector.scale(line.dir, t1));
-		const cr2 = vector.add(line.start, vector.scale(line.dir, t2));
+
+		const cr1 = Object.assign({}, i1);
+		cr1.point = vector.add(line.start, vector.scale(line.dir, t1));
+
+		const cr2 = Object.assign({}, i2);
+		cr2.point = vector.add(line.start, vector.scale(line.dir, t2));
 
 		const a_cr1_cr2 = [cr1,cr2];
 		const a_cr2_cr1 = [cr2,cr1];
@@ -73,17 +81,14 @@ export class Plane implements Intersectable {
 		this.pos = pos;
 	}
 
-	line_intersection(line: Line, flags: IntersectionFlags = {}): Vector[] {
+	line_intersection(line: Line, flags: IntersectionFlags = {}): IntersectionInfoWithNormal[] {
 		let denom = vector.dot(line.dir, this.normal);
-		//const denom = dot3(line.dir, this.normal);
 		if (denom == 0 && !flags.allow_infinity)
 			return [];
 
 		let tmp_vec = vector.sub(this.pos, line.start);
 
-		//let off_dist = vector.sub(this.pos, line.start);
 		let ratio = vector.dot(tmp_vec, this.normal) / denom;
-		//const ratio = dot3(off_dist, this.normal) / denom;
 
 		switch (flags.intersection_direction ?? IntersectionDirection.BOTH) {
 			case IntersectionDirection.BOTH:
@@ -94,10 +99,13 @@ export class Plane implements Intersectable {
 			default: // BACKWARD
 				if (ratio > 0.0)
 					return [];
-			}
+		}
 
 		vector.copy(tmp_vec, line.start);
-		return [vector.add_self(tmp_vec, vector.scale(line.dir, ratio))];
+		return [{
+			point: vector.add_self(tmp_vec, vector.scale(line.dir, ratio)),
+			normal: this.normal
+		}];
 	}
 }
 
@@ -138,7 +146,7 @@ export class Sphere implements Intersectable {
 		return this._radius;
 	}
 
-	line_intersection(line: Line, flags: IntersectionFlags = {}): Vector[] {
+	line_intersection(line: Line, flags: IntersectionFlags = {}): IntersectionInfo[] {
 		const dist = vector.sub(line.start, this.pos);
 		const a = vector.dot(line.dir, line.dir);
 		const b = vector.dot(dist, line.dir)*2;
@@ -157,5 +165,79 @@ export class Sphere implements Intersectable {
 		let t2 = tmp1 + tmp2;
 
 		return select_intersection_points2(line, t1, t2, flags);
+	}
+}
+
+/** AABB box */
+export class Box implements Intersectable {
+	pos: Point;
+	size: Vector;
+
+	constructor(pos: Point, size: Vector) {
+		this.pos = pos;
+		this.size = size;
+	}
+
+	static FACE_NORMALS = [
+		vector.vector(-1,0,0), // left,
+		vector.vector(1,0,0),  // right
+		vector.vector(0,-1,0), // top
+		vector.vector(0,1,0),  // bottom
+		vector.vector(0,0,-1), // front
+		vector.vector(0,0,1)   // back
+	];
+
+	line_intersection(line: Line, flags: IntersectionFlags): IntersectionInfoWithNormal[] {
+		const tl_pos = vector.sub(this.pos, vector.scale(this.size, 0.5));
+
+		const p = [
+			line.start.v[0] - tl_pos.v[0],
+			tl_pos.v[0] + this.size.v[0] - line.start.v[0],
+			line.start.v[1] - tl_pos.v[1],
+			tl_pos.v[1] + this.size.v[1] - line.start.v[1],
+			line.start.v[2] - tl_pos.v[2],
+			tl_pos.v[2] + this.size.v[2] - line.start.v[2]
+		];
+
+		const q = [
+			-line.dir.v[0],
+			 line.dir.v[0],
+			-line.dir.v[1],
+			 line.dir.v[1],
+			-line.dir.v[2],
+			 line.dir.v[2]
+		];
+
+		let u1 = -Infinity;
+		let u2 = Infinity;
+
+		let i1: number = undefined;
+		let i2: number = undefined;
+
+		for (let i = 0; i < 6; ++i) {
+			const elem = p[i];
+			const u = elem / q[i];
+			if (elem < 0) {
+				if (u > u1) {
+					u1 = u;
+					i1 = i;
+				}
+			} else {
+				if (u < u2) {
+					u2 = u;
+					i2 = i;
+				}
+			}
+		}
+
+		if (u1 > u2)
+			return [];
+
+		const normal1 = Box.FACE_NORMALS[i1];
+		const normal2 = Box.FACE_NORMALS[i2];
+
+		return <IntersectionInfoWithNormal[]> select_intersection_points2(line, u1, u2, flags,
+                                         <IntersectionInfoWithNormal> { normal: normal1 },
+                                         <IntersectionInfoWithNormal> { normal: normal2 });
 	}
 }

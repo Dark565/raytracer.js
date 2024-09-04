@@ -23,13 +23,13 @@ import { SpaceOctree, OctreeWalker, new_subtree } from '@app/octree_space';
 import { EntitySet, EntityOtree, new_entity_octree, add_entity_to_octree } from '@app/octree_entity';
 import { Entity, CollisionInfo } from '@app/entity';
 import { SphereEntity } from '@app/entities/entity_sphere';
+import { BoxEntity } from '@app/entities/entity_box';
 import * as material from '@app/material';
 import { SIMPLE_SMOOTH_MATERIAL, SIMPLE_LIGHT_MATERIAL } from '@app/materials/material_solid';
 import { Texture, TextureError } from '@app/texture/texture';
 import { ImageTexture } from '@app/texture/texture_image';
 import { SolidTexture } from '@app/texture/texture_solid';
 import { SkySphere } from '@app/sky/sky_sphere';
-import { BoxEntity } from '@app/entities/entity_box';
 import { Raytracer, RaytracerConfig } from '@app/raytracer';
 import { Camera, CameraConfig } from '@app/view/camera';
 import { CanvasScreen } from '@app/view/screen_canvas';
@@ -70,7 +70,13 @@ function get_random_texture(prng: PRNG, img_txt_prob: number, img_textures: Text
 }
 
 function generate_some_aligned_entities(tree: EntityOtree, prng: PRNG, n_entities: number, img_txt_prob: number, light_prob: number, img_textures: Texture[]) {
-	const entity_classes = [SphereEntity, BoxEntity];
+	const entity_classes = [{
+		class: SphereEntity,
+		is_textured: true
+	}, {
+		class: BoxEntity,
+		is_textured: false
+	}];
 
 	let existing_points: Point[] = [];
 
@@ -92,10 +98,11 @@ function generate_some_aligned_entities(tree: EntityOtree, prng: PRNG, n_entitie
 			continue;
 
 		const is_light = prng.next() <= light_prob;
+		const ent_class = entity_classes[(prng.next() * entity_classes.length) << 0];
 
-		const texture = get_random_texture(prng, is_light ? 0 : img_txt_prob, img_textures);
+		const texture = get_random_texture(prng, is_light || !ent_class.is_textured ? 0 : img_txt_prob, img_textures);
 		console.log(`${x}, ${y}, ${z}   ${size}`);
-		const entity = new SphereEntity(undefined, is_light ? SIMPLE_LIGHT_MATERIAL : SIMPLE_SMOOTH_MATERIAL, texture, point(x,y,z), size);
+		const entity = new ent_class.class(undefined, is_light ? SIMPLE_LIGHT_MATERIAL : SIMPLE_SMOOTH_MATERIAL, texture, point(x,y,z), size);
 		//entity.set_octree(tree);
 		//tree.value.set.add(entity);
 		add_entity_to_octree(tree, entity, { max_in_depth: 16, max_out_depth: 4 });

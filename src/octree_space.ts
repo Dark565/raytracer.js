@@ -357,8 +357,8 @@ export class OctreeWalker<T> {
 			const cross_point = plane.line_intersection(line, { allow_infinity: true, intersection_direction: IntersectionDirection.BOTH });
 
 			const probe_point = cross_point[0];
-			const axis1_mid_dist = probe_point.v[axis1] - mid_point.v[axis1];
-			const axis2_mid_dist = probe_point.v[axis2] - mid_point.v[axis2];
+			const axis1_mid_dist = probe_point.point.v[axis1] - mid_point.v[axis1];
+			const axis2_mid_dist = probe_point.point.v[axis2] - mid_point.v[axis2];
 
 			const a1_ae_middle = axis1_mid_dist >= 0;
 			const a2_ae_middle = axis2_mid_dist >= 0;

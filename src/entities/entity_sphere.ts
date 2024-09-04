@@ -62,8 +62,8 @@ export class SphereEntity extends BasicEntity {
 		if (cross_point.length == 0)
 			return null;
 
-		const normal = vector.scale(vector.sub(cross_point[0], this.pos), 2/this.diameter);
-		const coll_info = { point: cross_point[0], material: this.material, texture: this.texture, normal: normal };
+		const normal = vector.scale(vector.sub(cross_point[0].point, this.pos), 2/this.diameter);
+		const coll_info = { point: cross_point[0].point, material: this.material, texture: this.texture, normal: normal };
 		return coll_info;
 	}
 
