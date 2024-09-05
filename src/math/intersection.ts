@@ -22,21 +22,18 @@ import * as vector from '@app/math/vector';
 export enum IntersectionDirection {
 	BOTH,
 	FORWARD,
-	BACKWAR,
+	BACKWARD,
 }
 
 export interface IntersectionFlags {
 	/** This flag instructs an intersection function to not get rid of infinity.
-	 * For example, with this flag, line_intersection() function on Plane returns a point with
-	 * Infinity or -Infinity for its fields if a line is parallel to a plane. */
+	 * For example, with this flag, line_intersection() function on Plane returns a +-infinity
+	 * parameter if a line is parallel to a plane. */
 	allow_infinity?: boolean
-
-	/** The allowed direction of intersection point. */
-	intersection_direction?: IntersectionDirection
 }
 
 export interface IntersectionInfo {
-	point: Point;
+	parameter: number;
 }
 
 export interface IntersectionInfoWithNormal extends IntersectionInfo {
@@ -45,32 +42,6 @@ export interface IntersectionInfoWithNormal extends IntersectionInfo {
 
 export interface Intersectable {
 	line_intersection(line: Line, flags: IntersectionFlags): IntersectionInfo[];
-}
-
-/** Select intersection points according to flags.intersection_direction. */
-function select_intersection_points2(line: Line, t1: number, t2: number, flags: IntersectionFlags,
-																		i1?: IntersectionInfo, i2?: IntersectionInfo): IntersectionInfo[] {
-
-		const sp_dir = flags.intersection_direction ?? IntersectionDirection.BOTH;
-
-		const cr1 = Object.assign({}, i1);
-		cr1.point = vector.add(line.start, vector.scale(line.dir, t1));
-
-		const cr2 = Object.assign({}, i2);
-		cr2.point = vector.add(line.start, vector.scale(line.dir, t2));
-
-		const a_cr1_cr2 = [cr1,cr2];
-		const a_cr2_cr1 = [cr2,cr1];
-		const a_cr2 = [cr2];
-
-		const res_matrix = [
-				a_cr1_cr2, a_cr1_cr2, a_cr1_cr2, a_cr1_cr2,
-				[],        [],        a_cr2,     a_cr1_cr2,
-				a_cr2_cr1, [],        a_cr1_cr2, []
-		];
-
-		const lut_col_idx = (Number(t2 >= 0) << 1) | Number(t1 >= 0);
-		return res_matrix[sp_dir * 4 + lut_col_idx];
 }
 
 export class Plane implements Intersectable {
@@ -90,20 +61,8 @@ export class Plane implements Intersectable {
 
 		let ratio = vector.dot(tmp_vec, this.normal) / denom;
 
-		switch (flags.intersection_direction ?? IntersectionDirection.BOTH) {
-			case IntersectionDirection.BOTH:
-				break;
-			case IntersectionDirection.FORWARD:
-				if (ratio < 0.0)
-					return [];
-			default: // BACKWARD
-				if (ratio > 0.0)
-					return [];
-		}
-
-		vector.copy(tmp_vec, line.start);
 		return [{
-			point: vector.add_self(tmp_vec, vector.scale(line.dir, ratio)),
+			parameter: ratio,
 			normal: this.normal
 		}];
 	}
@@ -164,7 +123,7 @@ export class Sphere implements Intersectable {
 		let t1 = tmp1 - tmp2;
 		let t2 = tmp1 + tmp2;
 
-		return select_intersection_points2(line, t1, t2, flags);
+		return [{parameter: t1}, {parameter: t2}];
 	}
 }
 
@@ -236,8 +195,21 @@ export class Box implements Intersectable {
 		const normal1 = Box.FACE_NORMALS[i1];
 		const normal2 = Box.FACE_NORMALS[i2];
 
-		return <IntersectionInfoWithNormal[]> select_intersection_points2(line, u1, u2, flags,
-                                         <IntersectionInfoWithNormal> { normal: normal1 },
-                                         <IntersectionInfoWithNormal> { normal: normal2 });
+		return [{parameter: u2, normal: normal2}, {parameter: u1, normal: normal1}];
 	}
+}
+
+export function select_parameters(param: IntersectionInfo[], dir: IntersectionDirection): IntersectionInfo[] {
+	switch (dir) {
+	case IntersectionDirection.FORWARD:
+		return param.filter((i) => i.parameter >= 0);
+	case IntersectionDirection.BACKWARD:
+		return param.filter((i) => i.parameter < 0);
+	default: // IntersectionDirecton.BOTH
+		return param;
+	}
+}
+
+export function compute_intersection_point(line: Line, param: IntersectionInfo): Point {
+	return vector.add(line.start, vector.scale(line.dir, param.parameter));
 }

@@ -50,17 +50,23 @@ export class BoxEntity extends BasicEntity {
 	
 	collision_info(ray: Ray): CollisionInfo|null {
 		const int_ent = new intersection.Box(this.get_pos(), vector.scale_self(vector.vector(1,1,1), this.get_size()));
-		const points = int_ent.line_intersection({start: ray.get_pos(), dir: ray.get_dir()},
-																						 {intersection_direction: intersection.IntersectionDirection.FORWARD});
+		const line = {start: ray.get_pos(), dir: ray.get_dir()};
 
-		if (points.length == 0)
+		let params = int_ent.line_intersection(line, {});
+
+		params = <intersection.IntersectionInfoWithNormal[]> 
+			intersection.select_parameters(params, intersection.IntersectionDirection.FORWARD);
+
+		if (params.length == 0)
 			return undefined;
 
+		const cross_point = intersection.compute_intersection_point(line, params[0]);
+
 		return {
-			point: points[0].point,
+			point: cross_point,
 			material: this.get_material(),
 			texture: this.get_texture(),
-			normal: points[0].normal
+			normal: params[0].normal
 		}
 	}
 

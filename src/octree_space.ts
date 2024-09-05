@@ -19,7 +19,7 @@
 import { Octree, Octant, OctreePos } from '@app/octree';
 import { NODE_ORDER_MAP, NODE_ORDERS } from '@app/octree_const';
 import { Vector, Point, Line } from '@app/math/geometry';
-import { Plane, IntersectionDirection } from '@app/math/intersection';
+import { Plane, compute_intersection_point, IntersectionDirection } from '@app/math/intersection';
 import * as vector from '@app/math/vector';
 import * as space from '@app/space';
 
@@ -139,8 +139,6 @@ interface OctreeWalkerNodeInfo<T> {
 	/** Marks whether the node has been already returned by next() */
 	was_returned: boolean;
 }
-
-/* TODO: Implement cross logic stack for the walker
 
 /** A linear memory and logarithmic time complexity algorithm for Octree ray-casting */
 export class OctreeWalker<T> {
@@ -354,11 +352,11 @@ export class OctreeWalker<T> {
 		const fill_logic_vec_for_planes = (axis1: number, axis2: number, plane_i: number) => {
 			const axis_bit = 1<<plane_i;
 			const plane = new Plane(vector.vector(axis_bit&1, axis_bit&2, axis_bit&4), mid_point, { assume_normalized: true });
-			const cross_point = plane.line_intersection(line, { allow_infinity: true, intersection_direction: IntersectionDirection.BOTH });
+			const cross_param = plane.line_intersection(line, { allow_infinity: true });
 
-			const probe_point = cross_point[0];
-			const axis1_mid_dist = probe_point.point.v[axis1] - mid_point.v[axis1];
-			const axis2_mid_dist = probe_point.point.v[axis2] - mid_point.v[axis2];
+			const probe_point = compute_intersection_point(line, cross_param[0]);
+			const axis1_mid_dist = probe_point.v[axis1] - mid_point.v[axis1];
+			const axis2_mid_dist = probe_point.v[axis2] - mid_point.v[axis2];
 
 			const a1_ae_middle = axis1_mid_dist >= 0;
 			const a2_ae_middle = axis2_mid_dist >= 0;

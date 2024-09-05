@@ -23,7 +23,7 @@ import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
 import { Material } from '@app/material';
 import { Texture } from '@app/texture/texture';
-import { Sphere, IntersectionDirection } from '@app/math/intersection';
+import { Sphere, select_parameters, compute_intersection_point, IntersectionDirection } from '@app/math/intersection';
 
 export class SphereEntity extends BasicEntity {
 	private diameter: number;
@@ -56,14 +56,18 @@ export class SphereEntity extends BasicEntity {
 	collision_info(ray: Ray): CollisionInfo|null {
 		const raypos = ray.get_pos();
 		const raydir = ray.get_dir();
-		const cross_point = this.sphere_math.line_intersection({start: raypos, dir: raydir},
-                                                    { intersection_direction: IntersectionDirection.FORWARD });
+		const line = {start: raypos, dir: raydir};
 
-		if (cross_point.length == 0)
+		let cross_param = this.sphere_math.line_intersection(line);
+		cross_param = select_parameters(cross_param, IntersectionDirection.FORWARD);
+
+		if (cross_param.length == 0)
 			return null;
 
-		const normal = vector.scale(vector.sub(cross_point[0].point, this.pos), 2/this.diameter);
-		const coll_info = { point: cross_point[0].point, material: this.material, texture: this.texture, normal: normal };
+		const cross_point = compute_intersection_point(line, cross_param[0]);
+
+		const normal = vector.scale(vector.sub(cross_point, this.pos), 2/this.diameter);
+		const coll_info = { point: cross_point, material: this.material, texture: this.texture, normal: normal };
 		return coll_info;
 	}
 
