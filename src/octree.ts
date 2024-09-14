@@ -27,7 +27,6 @@ export class Octree<T, ID> {
 	index_within_parent?: number; // used for optimization
 	value?: T;
 	id: ID;
-	debug_id: number;
 	private flags: { invalidated: boolean };
 	private nodes: Tuple8<Octant<T,ID>>;
 

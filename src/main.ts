@@ -78,17 +78,18 @@ function generate_some_aligned_entities(tree: EntityOtree, prng: PRNG, n_entitie
 		is_textured: false
 	}];
 
-	let existing_points: Point[] = [];
+	let existing_qpos: [number,number,number][] = [];
 
 	for (let i = 0; i < n_entities; i++) {
-		const level = 1 + Math.floor(prng.next() * 2);
+		const level = 1 + Math.floor(prng.next() * 7);
 		const n_quant = 1 << (level);
 		const size = 1 / n_quant;
-		const [x, y, z] = [0,0,0].map(_ => { return ((prng.next() * n_quant) << 0) * size + size/2 });
+		const [q_x, q_y, q_z] = [0,0,0].map(_ => (prng.next() * n_quant) << 0);
+		const [x, y, z] = [q_x,q_y,q_z].map(q => q * size + size/2);
 		const e_point = point(x,y,z);
 		let already_existing = false;
-		for (let p of existing_points) {
-			if (vector.near_equal(e_point, p, 1e-3)) {
+		for (let q of existing_qpos) {
+			if (q_x == q[0] && q_y == q[1] && q_z == q[2]) {
 				already_existing = true;
 				break;
 			}
@@ -97,12 +98,14 @@ function generate_some_aligned_entities(tree: EntityOtree, prng: PRNG, n_entitie
 		if (already_existing)
 			continue;
 
+		existing_qpos.push([q_x,q_y,q_z]);
+
 		const is_light = prng.next() <= light_prob;
 		const ent_class = entity_classes[(prng.next() * entity_classes.length) << 0];
 
 		const texture = get_random_texture(prng, is_light || !ent_class.is_textured ? 0 : img_txt_prob, img_textures);
 		console.log(`${x}, ${y}, ${z}   ${size}`);
-		const entity = new ent_class.class(undefined, is_light ? SIMPLE_LIGHT_MATERIAL : SIMPLE_SMOOTH_MATERIAL, texture, point(x,y,z), size);
+		const entity = new ent_class.class(undefined, is_light ? SIMPLE_LIGHT_MATERIAL : SIMPLE_SMOOTH_MATERIAL, texture, e_point, size);
 		//entity.set_octree(tree);
 		//tree.value.set.add(entity);
 		add_entity_to_octree(tree, entity, { max_in_depth: 16, max_out_depth: 4 });
@@ -139,7 +142,6 @@ class PlayerInterface {
 	fps_samples: number[] = [];
 	fps_mean: number = 0; // sma(window_size)
 
-f
 	constructor(config: PlayerInterfaceConfig, canvas_elem: HTMLElement, stat_elem: HTMLDivElement, camera: Camera, reset_pos: Point, tick_handler: ()=>void) {
 		this.config = config;
 		this.canvas_elem = canvas_elem;
@@ -185,7 +187,7 @@ f
 			- angles: ${angle_deg_x.toPrecision(4)}°, ${angle_deg_y.toPrecision(4)}°<br><br>
 
 			fps: ${(this.fps_samples[this.fps_samples.length-1] ?? 0).toPrecision(4)}<br>
-			- σ(${this.config.fps_mean_window_size}): ${this.fps_mean}`
+			- μ(${this.config.fps_mean_window_size}): ${this.fps_mean}`
 	}
 
 
@@ -281,8 +283,8 @@ async function main() {
 	const prng = new FpLcg(obtain_seed_from_url_param() ?? RANDOM_SEED);
 
 	const camera_conf: CameraConfig = {
-		fov_v: Math.PI*0.75,
-		fov_h: Math.PI*0.75,
+		fov_v: Math.PI*0.5,
+		fov_h: Math.PI*0.5,
 		screen_w: canvas.width,
 		screen_h: canvas.height,
 		rot_v: /*Math.PI/120*/ Math.PI/30,
@@ -314,12 +316,12 @@ async function main() {
 
 	console.log("textures loaded");
 
-	generate_some_aligned_entities(otree, prng, 3, 0.75, 0.5, textures);
+	generate_some_aligned_entities(otree, prng, 32, 0.75, 0.5, textures);
 	const sky = new SkySphere(sky_txt);
 
 	const raytracer_conf: RaytracerConfig = {
 		refmax: REFMAX,
-		distance_attenuation_factor: 2,
+		distance_attenuation_factor: 1,
 		sky: sky
 	};
 

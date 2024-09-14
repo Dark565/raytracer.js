@@ -110,8 +110,7 @@ export class Ray {
 	trace() {
 		//console.log(`${Ray.debug_ray_count}: called trace()`);
 		const walker = this.walker;
-		walker.direction = this.dir;
-		walker.set_start_point(this.refpoint, this.startnode);
+		walker.set_pos_and_dir(this.refpoint, this. dir, this.startnode);
 		//walker.start_point = (this.refpoint);
 		let tree_node: ReturnType<typeof walker.next>;
 		let last_entity: Entity = undefined;
@@ -124,13 +123,13 @@ export class Ray {
 			let collision_info: CollisionInfo;
 			let entity: Entity;
 			for (entity of search_array.set) {
-				//if (entity == last_entity) {
-				//	continue;
-				//}
+				if (entity == last_entity) {
+					continue;
+				}
 
 				collision_info = entity.collision_info(this);
 				/* TODO: Probably find a better way for getting rid of the previous collision point */
-				if (collision_info != undefined && !vector.near_equal(collision_info.point, this.refpoint, 1e-5))
+				if (collision_info != undefined /*&& !vector.near_equal(collision_info.point, this.refpoint, 1e-3) */)
 					break;
 			}
 
@@ -142,7 +141,7 @@ export class Ray {
 				collision_info.material.alter_ray(this, entity, collision_info.texture, collision_info.point);
 				this.path_distance += vector.length(vector.sub(collision_info.point, this.refpoint));
 				this.refpoint = collision_info.point;
-				walker.start_point = this.refpoint;
+				walker.set_position(this.refpoint);
 
 				const response_type = collision_info.material.response_type(collision_info.point);
 				if (collision_info.material.is_light_source()) {
@@ -159,7 +158,7 @@ export class Ray {
 
 					//this.dir = this.dir.rotate_axis(collision_info.normal, VECTOR_ORTHO).negate();
 					this.dir = vector.reflection(this.dir, collision_info.normal);
-					walker.direction = this.dir;
+					walker.set_pos_and_dir(this.refpoint, this.dir);
 					break;
 				case material.ResponseType.REFRACTION:
 					break

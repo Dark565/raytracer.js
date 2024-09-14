@@ -16,6 +16,7 @@
 
 import { Point, Vector, Line } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
+import { isNegative } from '@app/math/mathutils';
 
 /* TODO: Take the intersection checking function outside of class */
 
@@ -146,25 +147,25 @@ export class Box implements Intersectable {
 		vector.vector(0,0,1)   // back
 	];
 
-	line_intersection(line: Line, flags: IntersectionFlags): IntersectionInfoWithNormal[] {
+	line_intersection(line: Line, flags: IntersectionFlags, _debug = false): IntersectionInfoWithNormal[] {
 		const tl_pos = vector.sub(this.pos, vector.scale(this.size, 0.5));
 
 		const p = [
-			line.start.v[0] - tl_pos.v[0],
-			tl_pos.v[0] + this.size.v[0] - line.start.v[0],
-			line.start.v[1] - tl_pos.v[1],
-			tl_pos.v[1] + this.size.v[1] - line.start.v[1],
-			line.start.v[2] - tl_pos.v[2],
-			tl_pos.v[2] + this.size.v[2] - line.start.v[2]
-		];
-
-		const q = [
 			-line.dir.v[0],
 			 line.dir.v[0],
 			-line.dir.v[1],
 			 line.dir.v[1],
 			-line.dir.v[2],
 			 line.dir.v[2]
+		];
+
+		const q = [
+			line.start.v[0] - tl_pos.v[0],
+			tl_pos.v[0] + this.size.v[0] - line.start.v[0],
+			line.start.v[1] - tl_pos.v[1],
+			tl_pos.v[1] + this.size.v[1] - line.start.v[1],
+			line.start.v[2] - tl_pos.v[2],
+			tl_pos.v[2] + this.size.v[2] - line.start.v[2]
 		];
 
 		let u1 = -Infinity;
@@ -175,8 +176,8 @@ export class Box implements Intersectable {
 
 		for (let i = 0; i < 6; ++i) {
 			const elem = p[i];
-			const u = elem / q[i];
-			if (elem < 0) {
+			const u = q[i] / elem;
+			if (isNegative(elem)) {
 				if (u > u1) {
 					u1 = u;
 					i1 = i;
@@ -189,13 +190,17 @@ export class Box implements Intersectable {
 			}
 		}
 
-		if (u1 > u2)
+		if (u1 > u2) {
+			if (_debug)
+				debugger;
+
 			return [];
+		}
 
 		const normal1 = Box.FACE_NORMALS[i1];
 		const normal2 = Box.FACE_NORMALS[i2];
 
-		return [{parameter: u2, normal: normal2}, {parameter: u1, normal: normal1}];
+		return [{parameter: u1, normal: normal1}, {parameter: u2, normal: normal2}];
 	}
 }
 

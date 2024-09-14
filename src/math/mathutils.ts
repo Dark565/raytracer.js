@@ -40,3 +40,8 @@ export function max<T>(list: Iterable<T>, cmp_fn: (a:T, b:T) => number): T {
 	}
 	return min;
 }
+
+/** This function detects signess of all valid floating point numbers (including -0). */
+export function isNegative(x: number) {
+	return x < 0 || Object.is(x, -0);
+}

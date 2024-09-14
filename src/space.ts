@@ -21,6 +21,12 @@ import * as vector from '@app/math/vector';
  * which will allow to refactor this code to be statically checked instead of
  * performing runtime assertions. */
 
+export enum RangeCoverage {
+	FULL,
+	OPEN_CLOSE,
+	CLOSE_OPEN
+}
+
 export interface Space {
 	pos: Point;
 	size: Vector;
@@ -46,17 +52,33 @@ export function assert_space_compatibility(a: Space, b: Space): void {
 	vector.assert_compatibility(a.pos,b.pos)
 }
 
-export function point_in_space(point: Point, space: Space): boolean {
+export function point_in_space(point: Point, space: Space, coverage = RangeCoverage.CLOSE_OPEN): boolean {
 	assert_space_validity(space);
 	vector.assert_compatibility(point, space.pos);
 
-	for (let i = 0; i < vector.size(point); i++) {
-		if (!(point.v[i] >= space.pos.v[i] 
-					&& point.v[i] < space.pos.v[i] + space.size.v[i]))
-				return false;
+	switch (coverage) {
+	case RangeCoverage.CLOSE_OPEN:
+		for (let i = 0; i < vector.size(point); i++) {
+			if (!(point.v[i] >= space.pos.v[i] 
+						&& point.v[i] < space.pos.v[i] + space.size.v[i]))
+					return false;
+		}
+		return true;
+	case RangeCoverage.OPEN_CLOSE:
+		for (let i = 0; i < vector.size(point); i++) {
+			if (!(point.v[i] > space.pos.v[i] 
+						&& point.v[i] <= space.pos.v[i] + space.size.v[i]))
+					return false;
+		}
+		return true;
+	default:
+		for (let i = 0; i < vector.size(point); i++) {
+			if (!(point.v[i] >= space.pos.v[i] 
+						&& point.v[i] <= space.pos.v[i] + space.size.v[i]))
+					return false;
+		}
+		return true;
 	}
-
-	return true;
 }
 
 /** Check whether an interior space is fully within an exterior space */

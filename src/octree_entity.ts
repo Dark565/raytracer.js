@@ -102,7 +102,7 @@ function extend_tree_inside_to_fit_up_to_depth(root: EntityOtree, node: EntityOt
 		if (!aabb_in_space(aabb, space))
 			break;
 
-		const new_tree = new_entity_octree({pos: space.pos, size: cur_node.id.size/2}, node);
+		const new_tree = new_entity_octree({pos: space.pos, size: cur_node.id.size/2}, cur_node);
 		const node_idx = (z << 2) | (y << 1) | (x << 0);
 		cur_node.set(node_idx, new_tree);
 

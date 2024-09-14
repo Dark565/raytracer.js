@@ -61,7 +61,6 @@ export class BoxEntity extends BasicEntity {
 			return undefined;
 
 		const cross_point = intersection.compute_intersection_point(line, params[0]);
-
 		return {
 			point: cross_point,
 			material: this.get_material(),
