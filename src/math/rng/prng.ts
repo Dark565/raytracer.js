@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-/** Base class for PRNGs */
-export abstract class PRNG {
+import RNG from './rng';
+
+/** Base class for pseudo-random number generators */
+export default abstract class PRNG extends RNG {
 	abstract seed(seed: number);
 	abstract next(): number;
 }

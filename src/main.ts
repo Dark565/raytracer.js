@@ -33,8 +33,8 @@ import { SkySphere } from '@app/sky/sky_sphere';
 import { Raytracer, RaytracerConfig } from '@app/raytracer';
 import { Camera, CameraConfig } from '@app/view/camera';
 import { CanvasScreen } from '@app/view/screen_canvas';
-import { PRNG } from '@app/math/prng/prng';
-import { FpLcg } from '@app/math/prng/fp-lcg';
+import RNG from '@app/math/rng/rng';
+import FpLcg from '@app/math/rng/fp-lcg';
 
 const CANVAS_ID = 'rtcanvas';
 const STATS_DIV_ID = 'rtstats';
@@ -51,25 +51,25 @@ function load_textures(): Texture[] {
 }
 
 // Return a random color vector from the RGB color space with a specific magnitude (intensity)
-function get_random_color_with_intensity(prng: PRNG, intensity: number): Color {
-	const [r,g,b] = Array(3).fill(0).map(()=>prng.next());
+function get_random_color_with_intensity(rng: RNG, intensity: number): Color {
+	const [r,g,b] = Array(3).fill(0).map(()=>rng.next());
 	const col_vec = vector.scale_self(vector.normalize_self(vector.vector(r,g,b)), intensity);
 	return { r: col_vec.v[0], g: col_vec.v[1], b: col_vec.v[2], a: 1.0 };
 }
 
 /* Return a random image texture or a new solid color one */
-function get_random_texture(prng: PRNG, img_txt_prob: number, img_textures: Texture[]) {
-	const rnd = prng.next();
+function get_random_texture(rng: RNG, img_txt_prob: number, img_textures: Texture[]) {
+	const rnd = rng.next();
 	if (rnd <= img_txt_prob) { // get image texture
-		const txt_i = (prng.next() * img_textures.length) << 0;
+		const txt_i = (rng.next() * img_textures.length) << 0;
 		return img_textures[txt_i];
 	} else {
-		const rand_color = get_random_color_with_intensity(prng, 1.0);
+		const rand_color = get_random_color_with_intensity(rng, 1.0);
 		return new SolidTexture(rand_color);
 	}
 }
 
-function generate_some_aligned_entities(tree: EntityOtree, prng: PRNG, n_entities: number, img_txt_prob: number, light_prob: number, img_textures: Texture[]) {
+function generate_some_aligned_entities(tree: EntityOtree, rng: RNG, n_entities: number, img_txt_prob: number, light_prob: number, img_textures: Texture[]) {
 	const entity_classes = [{
 		class: SphereEntity,
 		is_textured: true
@@ -81,10 +81,10 @@ function generate_some_aligned_entities(tree: EntityOtree, prng: PRNG, n_entitie
 	let existing_qpos: [number,number,number][] = [];
 
 	for (let i = 0; i < n_entities; i++) {
-		const level = 1 + Math.floor(prng.next() * 7);
+		const level = 1 + Math.floor(rng.next() * 7);
 		const n_quant = 1 << (level);
 		const size = 1 / n_quant;
-		const [q_x, q_y, q_z] = [0,0,0].map(_ => (prng.next() * n_quant) << 0);
+		const [q_x, q_y, q_z] = [0,0,0].map(_ => (rng.next() * n_quant) << 0);
 		const [x, y, z] = [q_x,q_y,q_z].map(q => q * size + size/2);
 		const e_point = point(x,y,z);
 		let already_existing = false;
@@ -100,10 +100,10 @@ function generate_some_aligned_entities(tree: EntityOtree, prng: PRNG, n_entitie
 
 		existing_qpos.push([q_x,q_y,q_z]);
 
-		const is_light = prng.next() <= light_prob;
-		const ent_class = entity_classes[(prng.next() * entity_classes.length) << 0];
+		const is_light = rng.next() <= light_prob;
+		const ent_class = entity_classes[(rng.next() * entity_classes.length) << 0];
 
-		const texture = get_random_texture(prng, is_light || !ent_class.is_textured ? 0 : img_txt_prob, img_textures);
+		const texture = get_random_texture(rng, is_light || !ent_class.is_textured ? 0 : img_txt_prob, img_textures);
 		console.log(`${x}, ${y}, ${z}   ${size}`);
 		const entity = new ent_class.class(undefined, is_light ? SIMPLE_LIGHT_MATERIAL : SIMPLE_SMOOTH_MATERIAL, texture, e_point, size);
 		//entity.set_octree(tree);
@@ -325,7 +325,7 @@ async function main() {
 		sky: sky
 	};
 
-	const raytracer = new Raytracer(raytracer_conf, otree, camera, screen);
+	const raytracer = new Raytracer(raytracer_conf, otree, camera, screen, prng);
 
 	const tick_fn = () => {
 		raytracer.trace_frame();

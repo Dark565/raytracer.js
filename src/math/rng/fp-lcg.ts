@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { PRNG } from '@app/math/prng/prng';
+import PRNG from './prng';
 
-/* Those constants are randomly chosen prime quotients */
+/* Those constants are randomly generated prime quotients */
 const PRNG_MUL1  = (3532205053565347.0/3768278866164713.0)
 const PRNG_TERM1 = (3773467585272041.0/4435662911655887.0)
 
@@ -46,8 +46,8 @@ export const SIMPLEPRNG_DEFAULT_PARAM = <FpLcgParam> {
 
 /** Simple floating-point tri-state Linear Congruential Generator with state mixing
  * which achieves reasonable uniformly distributed randomness without relying on bitwise arithmetic
- * which is a bit odd in JavaScript. */
-export class FpLcg extends PRNG {
+ * (which is a bit odd in JavaScript due to the floating-point nature of the number type). */
+export default class FpLcg extends PRNG {
 	private state1: number;
 	private state2: number;
 	private state3: number;
@@ -67,7 +67,7 @@ export class FpLcg extends PRNG {
 
 	/** Returns a random number in range <0.0, 1.0) that follows the uniform distribution */
 	next(): number {
-		// standard LCG step
+		// LCG step
 		const s1 = (this.state1 * this.param.mul1 + this.param.term1) % 1.0;
 		const s2 = (this.state2 * this.param.mul2 + this.param.term2) % 1.0;
 		const s3 = (this.state3 * this.param.mul3 + this.param.term3) % 1.0;
@@ -77,7 +77,7 @@ export class FpLcg extends PRNG {
 		this.state2 = s3;
 		this.state3 = s1 + s2;
 
-		// combine states to get result
+		// combine states to get the result
 		return (s1+s2+s3) % 1.0;
 	}
 }
