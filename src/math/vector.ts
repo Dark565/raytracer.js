@@ -153,6 +153,12 @@ export function angle2D(v: Vector2): number {
 	return Math.atan2(v.v[1], v.v[0]);
 }
 
+/** Return cosine between vectors */
+export function cosine(v1: Vector, v2: Vector): number {
+	assert_compatibility(v1,v2);
+	return dot(v1,v2) / length(v1)/length(v2);
+}
+
 export function	add_self(v1: Vector, v2: Vector): Vector {
 	assert_compatibility(v1, v2);
 	for (let i=0; i < size(v1); i++) {

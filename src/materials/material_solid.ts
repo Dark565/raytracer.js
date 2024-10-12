@@ -23,5 +23,5 @@ export class SolidMaterial extends StaticMaterial {
 export const SIMPLE_SMOOTH_MATERIAL = new SolidMaterial(ResponseType.REFLECTION, false, true, 0);
 export const SIMPLE_LIGHT_MATERIAL  = new SolidMaterial(ResponseType.REFLECTION, true, false, 0);
 
-/** A reflective material with 0.5 roughness */
-export const SIMPLE_ROUGH_MATERIAL = new SolidMaterial(ResponseType.REFLECTION, false, true, 0.5);
+export const SIMPLE_ROUGH_MATERIAL = new SolidMaterial(ResponseType.REFLECTION, false, true, 0.33);
+export const SIMPLE_TRANSPARENT_MATERIAL = new SolidMaterial(ResponseType.TRANSMISSION, false, false, 0);

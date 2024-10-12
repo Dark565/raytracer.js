@@ -21,7 +21,7 @@ import { Texture } from '@app/texture/texture';
 
 export enum ResponseType {
 	REFLECTION,
-	REFRACTION,
+	TRANSMISSION,
 	BOTH // needs additional ray
 };
 
@@ -47,7 +47,7 @@ export abstract class Material {
 	//abstract set transparence_index(index: number);
 	//abstract get transparence_index();
 
-	/** Set the refractive index of the material.
+	/* Set the refractive index of the material.
 	 * Range: (0, +inf) */
 	//abstract set refractive_index(index: number);
 	//abstract get refractive_index(): number;
@@ -80,7 +80,8 @@ export abstract class StaticMaterial extends Material {
 
 	roughness_index: number;
 
-	protected constructor(response: ResponseType, light_source: boolean, mirror: boolean, roughness: number) {
+	protected constructor(response: ResponseType, light_source: boolean, mirror: boolean,
+												roughness: number) {
 		super();
 		this.response = response;
 		this.light_source = light_source;

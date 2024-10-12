@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import * as vector from '@app/math/vector';
 import { clamp } from '@app/math/mathutils';
 import { Screen, RGBPixel, ScreenFlags } from '@app/view/screen';
 
@@ -40,11 +41,22 @@ export class CanvasScreen extends Screen {
 		const w = this.canvas.width;
 		const i = (y * w + x) << 2;
 
-		const col_conv = this.convert_color(pixel);
+		/** TODO: The exposure mechanism should be moved out of the Screen class
+		 *        to a specialized exposure buffer which operates on real pixel values.
+		 *        The purpose of this class should only be drawing image.
+		 */
 
-		this.image.data[i]   = col_conv[0];
-		this.image.data[i+1] = col_conv[1];
-		this.image.data[i+2] = col_conv[2];
+		const old_col_vec = vector.vector3(this.image.data[i], 
+																			 this.image.data[i+1],
+																			 this.image.data[i+2]);
+
+		let col_vec = vector.vector3(...this.convert_color(pixel));
+		vector.scale_self(col_vec, this.col_weight);
+		vector.add_self(col_vec, vector.scale(old_col_vec, 1 - this.col_weight));
+
+		this.image.data[i]   = col_vec.v[0] << 0;
+		this.image.data[i+1] = col_vec.v[1] << 0;
+		this.image.data[i+2] = col_vec.v[2] << 0;
 		this.image.data[i+3] = 0xff;
 		if (!this.flags.buffer_pixels)
 			this.flush();

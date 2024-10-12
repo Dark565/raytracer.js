@@ -5,6 +5,7 @@ import * as material from '@app/material';
 import { SolidTexture } from '@app/texture/texture_solid';
 import { SphereEntity } from '@app/entities/entity_sphere';
 import { SIMPLE_SMOOTH_MATERIAL } from '@app/materials/material_solid';
+import { SUBSTANCE_AIR } from '@app/substance';
 import { Point, point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 
@@ -43,7 +44,7 @@ test('point_at_pos() fuzzy test', ()=>{
 const TEXTURE = new SolidTexture({r:1.0, g:1.0, b:1.0, a:1.0});
 
 function add_arbitrary_entity_at_pos(tree: octree_entity.EntityOtree, pos: Point, size: number) {
-	const entity = new SphereEntity(undefined, SIMPLE_SMOOTH_MATERIAL, TEXTURE, pos, size);
+	const entity = new SphereEntity(undefined, SIMPLE_SMOOTH_MATERIAL, TEXTURE, SUBSTANCE_AIR, pos, size);
 	octree_entity.add_entity_to_octree(tree, entity, {max_in_depth: 10, max_out_depth: 10});
 	return entity;
 }

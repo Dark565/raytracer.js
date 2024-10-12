@@ -25,14 +25,16 @@ import { Entity, CollisionInfo } from '@app/entity';
 import { SphereEntity } from '@app/entities/entity_sphere';
 import { BoxEntity } from '@app/entities/entity_box';
 import * as material from '@app/material';
-import { SIMPLE_SMOOTH_MATERIAL, SIMPLE_LIGHT_MATERIAL } from '@app/materials/material_solid';
+import { SIMPLE_SMOOTH_MATERIAL, SIMPLE_ROUGH_MATERIAL, SIMPLE_LIGHT_MATERIAL, SIMPLE_TRANSPARENT_MATERIAL } from '@app/materials/material_solid';
 import { Texture, TextureError } from '@app/texture/texture';
 import { ImageTexture } from '@app/texture/texture_image';
 import { SolidTexture } from '@app/texture/texture_solid';
 import { SkySphere } from '@app/sky/sky_sphere';
 import { Raytracer, RaytracerConfig } from '@app/raytracer';
 import { Camera, CameraConfig } from '@app/view/camera';
+import { Screen } from '@app/view/screen';
 import { CanvasScreen } from '@app/view/screen_canvas';
+import { SUBSTANCE_AIR, SUBSTANCE_WATER, SUBSTANCE_GLASS } from '@app/substance';
 import RNG from '@app/math/rng/rng';
 import FpLcg from '@app/math/rng/fp-lcg';
 
@@ -69,7 +71,25 @@ function get_random_texture(rng: RNG, img_txt_prob: number, img_textures: Textur
 	}
 }
 
-function generate_some_aligned_entities(tree: EntityOtree, rng: RNG, n_entities: number, img_txt_prob: number, light_prob: number, img_textures: Texture[]) {
+function get_random_element_with_weights<T>(rng: RNG, elem: T[], weights: number[]): T {
+	const nweights = weights.length;
+	const weights_norm = vector.vector(...weights);
+	vector.scale_self(weights_norm, 1/vector.dot(weights_norm, vector.new_filled(nweights, 1)));
+
+	const weights_sorted_i = Array(nweights).fill(0).map((_,i) => i).sort(i => weights_norm.v[i]);
+	const rnd = rng.next();
+
+	let obj_i: number;
+	let weight = 0;
+	for (obj_i of weights_sorted_i.slice(0,-1)) {
+		weight += weights_norm.v[obj_i];
+		if (rnd <= weight)
+			return elem[obj_i];
+	}
+	return elem[weights_sorted_i[weights_sorted_i.length-1]];
+}
+
+function generate_some_aligned_entities(tree: EntityOtree, rng: RNG, n_entities: number, img_txt_prob: number, material_prob_weights: number[], img_textures: Texture[]) {
 	const entity_classes = [{
 		class: SphereEntity,
 		is_textured: true
@@ -77,6 +97,9 @@ function generate_some_aligned_entities(tree: EntityOtree, rng: RNG, n_entities:
 		class: BoxEntity,
 		is_textured: false
 	}];
+
+	const substances = [SUBSTANCE_AIR, SUBSTANCE_WATER, SUBSTANCE_GLASS];
+	const materials = [SIMPLE_LIGHT_MATERIAL, SIMPLE_ROUGH_MATERIAL, SIMPLE_SMOOTH_MATERIAL, SIMPLE_TRANSPARENT_MATERIAL];
 
 	let existing_qpos: [number,number,number][] = [];
 
@@ -100,12 +123,13 @@ function generate_some_aligned_entities(tree: EntityOtree, rng: RNG, n_entities:
 
 		existing_qpos.push([q_x,q_y,q_z]);
 
-		const is_light = rng.next() <= light_prob;
 		const ent_class = entity_classes[(rng.next() * entity_classes.length) << 0];
+		const substance = substances[(rng.next() * substances.length) << 0];
+		const material = get_random_element_with_weights(rng, materials, material_prob_weights);
 
-		const texture = get_random_texture(rng, is_light || !ent_class.is_textured ? 0 : img_txt_prob, img_textures);
+		const texture = get_random_texture(rng, material == SIMPLE_LIGHT_MATERIAL || !ent_class.is_textured ? 0 : img_txt_prob, img_textures);
 		console.log(`${x}, ${y}, ${z}   ${size}`);
-		const entity = new ent_class.class(undefined, is_light ? SIMPLE_LIGHT_MATERIAL : SIMPLE_SMOOTH_MATERIAL, texture, e_point, size);
+		const entity = new ent_class.class(undefined, material, texture, substance, e_point, size);
 		//entity.set_octree(tree);
 		//tree.value.set.add(entity);
 		add_entity_to_octree(tree, entity, { max_in_depth: 16, max_out_depth: 4 });
@@ -138,14 +162,17 @@ class PlayerInterface {
 
 	reset_pos: Point;
 	camera: Camera;
+	screen: Screen;
 	tick_handler: ()=>void;
 	fps_samples: number[] = [];
 	fps_mean: number = 0; // sma(window_size)
 
-	constructor(config: PlayerInterfaceConfig, canvas_elem: HTMLElement, stat_elem: HTMLDivElement, camera: Camera, reset_pos: Point, tick_handler: ()=>void) {
+	constructor(config: PlayerInterfaceConfig, canvas_elem: HTMLElement, stat_elem: HTMLDivElement,
+							camera: Camera, screen: Screen, reset_pos: Point, tick_handler: ()=>void) {
 		this.config = config;
 		this.canvas_elem = canvas_elem;
 		this.stat_elem = stat_elem;
+		this.screen = screen;
 		this.camera = camera;
 		this.reset_pos = reset_pos;
 		this.tick_handler = tick_handler;
@@ -231,6 +258,8 @@ class PlayerInterface {
 		this.camera.rotate_h_step(delta_x);
 		this.camera.rotate_v_step(delta_y);
 
+		this.screen.reset_exposure();
+
 		this.tick();
 		this.update_stats();
 
@@ -265,6 +294,8 @@ class PlayerInterface {
 					break;
 			}
 		}
+
+		this.screen.reset_exposure();
 
 		this.tick();
 		this.update_stats();
@@ -304,6 +335,7 @@ async function main() {
 
 	const textures = load_textures();
 	let sky_txt = new ImageTexture('assets/sky2.jpg', {r:0.2,g:0.2,b:0.7,a:1.0});
+	//let sky_txt = new SolidTexture({r:0,g:0,b:0,a:1});
 	// ensure all textures are loaded before running
 	try {
 		await Promise.all([...textures, sky_txt].map((txt) => txt.get_loading_promise()));
@@ -316,11 +348,12 @@ async function main() {
 
 	console.log("textures loaded");
 
-	generate_some_aligned_entities(otree, prng, 32, 0.75, 0.5, textures);
+	generate_some_aligned_entities(otree, prng, 16, 0.0, [1, 1, 1, 1], textures);
 	const sky = new SkySphere(sky_txt);
 
 	const raytracer_conf: RaytracerConfig = {
 		refmax: REFMAX,
+		default_substance: SUBSTANCE_AIR,
 		distance_attenuation_factor: 1,
 		sky: sky
 	};
@@ -342,7 +375,7 @@ async function main() {
 		move_down: move_dist
 	}
 
-	const player_iface = new PlayerInterface(player_iface_conf, canvas, stat_div, camera, reset_pos, tick_fn);
+	const player_iface = new PlayerInterface(player_iface_conf, canvas, stat_div, camera, screen, reset_pos, tick_fn);
 	player_iface.install_events();
 }
 

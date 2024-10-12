@@ -89,7 +89,7 @@ export class Sphere implements Intersectable {
 	}
 
 	set pos(pos: Vector) {
-		this.pos = pos;
+		this._pos = pos;
 		this.update_cache();
 	}
 

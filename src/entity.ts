@@ -21,6 +21,7 @@ import { Point, Vector } from '@app/math/geometry';
 import { Ray } from '@app/raytracer';
 import { Material } from '@app/material'
 import { Texture } from '@app/texture/texture';
+import Substance from '@app/substance';
 
 /** Information about ray collision. */
 export interface CollisionInfo {
@@ -35,13 +36,15 @@ export interface CollisionInfo {
 }
 
 export abstract class Entity {
+	protected substance?: Substance;
+
 	/* for introspection */
 	/** The octree including this entity */
 	protected _octree?: EntityOtree;
 
-	constructor(octree?: EntityOtree, pos?: Point) {
+	constructor(octree?: EntityOtree, substance?: Substance) {
 		this._octree = octree;
-		this._set_pos(pos);
+		this.substance = substance;
 	}
 
 	set_octree(tree: EntityOtree, flags: { keep_in_current?: boolean } = {}) {
@@ -53,6 +56,17 @@ export abstract class Entity {
 
 	get octree() {
 		return this._octree;
+	}
+
+	get_substance() {
+		return this.substance;
+	}
+
+	/** Set the inner substance of the entity and return the old one */
+	set_substance(s: Substance): Substance {
+		const substance = this.substance;
+		this.substance = s;
+		return substance;
 	}
 
 	/** Get the position of an entity (typically its center point). */
@@ -72,6 +86,9 @@ export abstract class Entity {
 	abstract get_texture(): Texture;
 	/** Set texture and return the old one */
 	abstract set_texture(texture: Texture): Texture;
+
+	/** Check whether a given point is fully within the entity */
+	abstract is_within(point: Point): boolean;
 
 	/** Get the axis-aligned bounding box for the entity.
 	 * @returns A pair: the attachment point of the first vertex and the length of edges. */

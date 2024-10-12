@@ -22,20 +22,16 @@ import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
 import { Material } from '@app/material';
 import { Texture } from '@app/texture/texture';
+import Substance from '@app/substance';
+import { Space, point_in_space } from '@app/space';
 import * as intersection from '@app/math/intersection';
 
 export class BoxEntity extends BasicEntity {
 	private size: number;
 
-	constructor(entity_otree: EntityOtree, material: Material, texture: Texture, pos: Point, size: number) {
-		super(entity_otree, material, texture, pos);
+	constructor(entity_otree: EntityOtree, material: Material, texture: Texture, substance: Substance, pos: Point, size: number) {
+		super(entity_otree, material, texture, substance, pos);
 		this.size = size;
-	}
-
-	set_pos(pos: Point): Point {
-		const old_pos = this.get_pos();
-		this.pos = pos;
-		return old_pos;
 	}
 
 	set_size(size: number): number {
@@ -46,6 +42,13 @@ export class BoxEntity extends BasicEntity {
 
 	get_size(): number {
 		return this.size;
+	}
+
+	is_within(point: Point): boolean {
+		const space: Space = { pos: this.get_pos(), 
+			                     size: vector.scale_self(vector.vector3(1,1,1), this.get_size()) };
+
+		return point_in_space(point, space);
 	}
 	
 	collision_info(ray: Ray): CollisionInfo|null {
@@ -65,7 +68,7 @@ export class BoxEntity extends BasicEntity {
 			point: cross_point,
 			material: this.get_material(),
 			texture: this.get_texture(),
-			normal: params[0].normal
+			normal: vector.scale(params[0].normal, -Math.sign(vector.dot(line.dir,params[0].normal)))
 		}
 	}
 

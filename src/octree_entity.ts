@@ -16,7 +16,7 @@
 
 /** @file Integration of entity with octree */
 
-import { point } from '@app/math/geometry';
+import { Point, point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 import { Octree } from '@app/octree';
 import { SpaceOctree, OctreeWalker, OctreeDim, SpaceOctreePos, node_at_pos } from '@app/octree_space';
@@ -186,4 +186,18 @@ export function add_entity_to_octree(tree: EntityOtree, entity: Entity, config: 
 	entity.set_octree(fitting_node);
 
 	return fitting_node;
+}
+
+/** Depth-first entity search. */
+export function entity_at_pos(tree: EntityOtree, point: Point): Entity {
+	// TODO: Optimize it to start from a given node
+	let cur_node = (node_at_pos(tree, point) ?? {}).tree;
+	while (cur_node != undefined) {
+		for (let entity of cur_node.value.set) {
+			if (entity.is_within(point))
+				return entity;
+		}
+		cur_node = cur_node.parent;
+	}
+	return undefined;
 }

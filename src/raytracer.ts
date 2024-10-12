@@ -17,7 +17,7 @@
 import { Vector, Point } from '@app/math/geometry';
 import * as vector from '@app/math/vector';
 import { clamp } from '@app/math/mathutils';
-import { EntitySet, new_entity_octree_walker, EntityOtree, EntityOtreeWalker, EntityOtreePos } from '@app/octree_entity';
+import { EntitySet, new_entity_octree_walker, entity_at_pos, EntityOtree, EntityOtreeWalker, EntityOtreePos } from '@app/octree_entity';
 import { Entity, CollisionInfo } from '@app/entity';
 import { node_at_pos } from '@app/octree_space';
 import { Sky } from '@app/sky/sky';
@@ -25,6 +25,9 @@ import { Color, color, clone_color, mul_color, clamp_color } from '@app/physics/
 import * as material from '@app/material';
 import { Camera } from '@app/view/camera';
 import { Screen } from '@app/view/screen';
+import RNG from '@app/math/rng/rng';
+import { isotropic_sphere_sample } from '@app/math/vector_utils';
+import Substance from '@app/substance';
 import * as debug from '@app/debug/object_hacks';
 
 export interface RaytracerConfig {
@@ -32,8 +35,10 @@ export interface RaytracerConfig {
 	refmax: number;
 	/** Sky definition */
 	sky: Sky;
+	/** The default (vacuum) substance */
+	default_substance: Substance;
 	/** It is the parameter A to the equation: isl_coef = 1 / (A * intensity)^2
-	 * where isl_coef (inverse square law coefficient) controls how much distance affects light intensity. */
+	 * where isl_coef (inverse square law coefficient) controls how distance affects light intensity. */
 	distance_attenuation_factor: number;
 };
 
@@ -66,12 +71,15 @@ export class Ray {
 	private walker: EntityOtreeWalker;
 	/** Path distance used for the inverse square law calculation */
 	private path_distance: number;
+	/** The current substance through which the ray moves */
+	private cur_substance: Substance;
 
 	private static debug_ray_count = 0;
 
 	constructor(rt: Raytracer, refmax: number, start_point: Point,
 							start_node: EntityOtreePos|undefined, dir: Vector,
-							color: Color, walker: EntityOtreeWalker, flags: { keep_dir_unnormalized?: boolean } = {})
+							cur_substance: Substance, color: Color,
+							walker: EntityOtreeWalker, flags: { keep_dir_unnormalized?: boolean } = {})
 	{
 		this.tracer = rt;
 		this.refcount = 0;
@@ -80,6 +88,7 @@ export class Ray {
 		this.startnode = start_node;
 		this.color = clone_color(color);
 		this.walker = walker;
+		this.cur_substance = cur_substance;
 		this.path_distance = 0;
 		if (!flags.keep_dir_unnormalized)
 			this.dir = vector.normalize(dir);
@@ -105,6 +114,49 @@ export class Ray {
 		return this.dir;
 	}
 
+	reflect_ray(coll_info: CollisionInfo) {
+		this.dir = vector.reflection(this.dir, coll_info.normal);
+	}
+
+	scatter_ray(coll_info: CollisionInfo) {
+		const rng = this.tracer.rng;
+		const rand_vec = isotropic_sphere_sample(rng);
+
+		if (vector.dot(rand_vec,coll_info.normal) < 0)
+			vector.scale_self(rand_vec, -1);
+
+		const ref_vec = vector.add(vector.scale(this.dir, 1-coll_info.material.roughness_index),
+		                           vector.scale(rand_vec, coll_info.material.roughness_index));
+
+		this.dir = vector.normalize_self(ref_vec);
+	}
+
+	refract_ray(substance: Substance, coll_info: CollisionInfo) {
+		const r_ratio  = this.cur_substance.refractive_index / substance.refractive_index;
+		const r_ratio_sq = r_ratio*r_ratio;
+		const cosine   = vector.dot(this.dir, coll_info.normal);
+		const cosine_sq = cosine * cosine;
+		const ref_sine_sq = (1 - cosine_sq) * r_ratio_sq;
+
+		if (ref_sine_sq <= 1) {
+			const ref_cosine = Math.sqrt(1 - ref_sine_sq);
+			const adj_term = vector.scale(coll_info.normal, ref_cosine - cosine);
+			vector.scale_self(this.dir, r_ratio);
+			vector.sub_self(this.dir, adj_term);
+		} else { // total internal reflection
+			this.reflect_ray(coll_info);
+		}
+	}
+
+	/** Move slightly forward towards the ray's direction.
+	 * Used to get rid of the last collision point from future collision tests */
+	move_slightly_forward() {
+		const dir = this.dir;
+		const move_dir = vector.hadamard(vector.vector3(Number.EPSILON, Number.EPSILON, Number.EPSILON),
+																		 vector.vector3(Math.sign(dir.v[0]), Math.sign(dir.v[1]), Math.sign(dir.v[2])));
+		vector.add_self(this.refpoint, move_dir);
+	}
+
 	/** Trace and modify the ray along its path */
 	/* TODO: Split this function */
 	trace() {
@@ -115,6 +167,9 @@ export class Ray {
 		let tree_node: ReturnType<typeof walker.next>;
 		let last_entity: Entity = undefined;
 		let light_hit = false;
+		const rng = this.tracer.rng;
+		const otree = this.tracer.tree;
+		const def_substance = this.tracer.config.default_substance;
 		while ((tree_node = walker.next()) != undefined) {
 			//console.log(`${Ray.debug_ray_count}: got node id ${debug.unique_object_id(tree_node.node)}, walker's stack size: ${walker.info_stack.length}`);
 
@@ -123,9 +178,9 @@ export class Ray {
 			let collision_info: CollisionInfo;
 			let entity: Entity;
 			for (entity of search_array.set) {
-				if (entity == last_entity) {
-					continue;
-				}
+				//if (entity == last_entity) {
+				//	continue;
+				//}
 
 				collision_info = entity.collision_info(this);
 				/* TODO: Probably find a better way for getting rid of the previous collision point */
@@ -134,14 +189,21 @@ export class Ray {
 			}
 
 			if (collision_info != undefined) {
+
+				// Starting direction cannot be aligned with the reflection normal 
+				if (vector.dot(this.dir, collision_info.normal) >= 0) {
+					console.warn(`warning: object ${entity.constructor.name}: reflection normal is acute to the incoming direction!`);
+					return;
+				}
+
 				//console.log(`${debug.unique_object_id(this)}: found intersect: ${collision_info.point.v}, entity: ${debug.unique_object_id(entity)}, raydir: ${this.dir.v}, raypos: ${this.refpoint.v}, normal: ${collision_info.normal.v}`);
 				last_entity = entity;
 
 				this.refcount++;
 				collision_info.material.alter_ray(this, entity, collision_info.texture, collision_info.point);
 				this.path_distance += vector.length(vector.sub(collision_info.point, this.refpoint));
+				//const _orig_point = this.refpoint;
 				this.refpoint = collision_info.point;
-				walker.set_position(this.refpoint);
 
 				const response_type = collision_info.material.response_type(collision_info.point);
 				if (collision_info.material.is_light_source()) {
@@ -157,14 +219,33 @@ export class Ray {
 					}
 
 					//this.dir = this.dir.rotate_axis(collision_info.normal, VECTOR_ORTHO).negate();
-					this.dir = vector.reflection(this.dir, collision_info.normal);
-					walker.set_pos_and_dir(this.refpoint, this.dir);
+					if (vector.dot(this.dir, collision_info.normal) >= 0)
+						debugger;
+
+					this.reflect_ray(collision_info);
+
+					if (collision_info.material.roughness_index > 0.0) {
+						this.scatter_ray(collision_info);
+					}
+					this.move_slightly_forward();
 					break;
-				case material.ResponseType.REFRACTION:
-					break
-				default: // the ray is scattered by default
+				case material.ResponseType.TRANSMISSION:
+					this.move_slightly_forward();
+					const rf_entity = entity_at_pos(otree, this.refpoint);
+					const substance = rf_entity ? rf_entity.get_substance() : def_substance;
+
+					/* If the substance of entity is undefined, it is assumed
+					 * to be the same as that of outside */
+					if (substance != undefined) {
+						this.refract_ray(substance, collision_info);
+						this.cur_substance = substance;
+					}	
+					break;
+				default:
 					return;
 				}
+
+				walker.set_position(this.refpoint);
 
 				if (this.refcount >= this.refmax) {
 					//console.log(`${debug.unique_object_id(this)}: reflection limit`);
@@ -186,6 +267,7 @@ export class Ray {
 		/* Attenuate the ray's intensity due to the inverse square law */
 		const isl_coef = 1.0 / (Number.EPSILON + (this.path_distance * this.tracer.config.distance_attenuation_factor)**2);
 		this.color = clamp_color(mul_color(this.color, { r: isl_coef, g: isl_coef, b: isl_coef, a: 1.0 }));
+		walker.set_pos_and_dir(this.refpoint, this.dir);
 	}
 }
 
@@ -195,14 +277,17 @@ export class Raytracer {
 	private walker: EntityOtreeWalker;
 	private camera: Camera;
 	private screen: Screen;
+	/** A random number generator engine. Used for phenomena like light scattering */
+	private _rng: RNG; 
 
 	config: RaytracerConfig;
 
-	constructor(config: RaytracerConfig, otree: EntityOtree, camera: Camera, screen: Screen) {
+	constructor(config: RaytracerConfig, otree: EntityOtree, camera: Camera, screen: Screen, rng: RNG) {
 		this.camera = camera;
 		this.screen = screen;
 		this.otree = otree;
 		this.walker = new_entity_octree_walker(otree);
+		this._rng = rng;
 		this.config = Object.assign({}, config);
 	}
 
@@ -218,14 +303,25 @@ export class Raytracer {
 		const start_pos = this.camera.get_pos();
 		const start_node = node_at_pos(this.otree, start_pos);
 
+		const start_ent = entity_at_pos(this.otree, start_pos);
+		const start_substance = start_ent ? start_ent.get_substance() : this.config.default_substance;
+
 		for (let campx of this.camera.get_dir_for_each_pixel()) {
 			const ray = new Ray(this, this.config.refmax, start_pos, start_node, campx.dir,
-													COLOR_WHITE, this.walker, { keep_dir_unnormalized: true });
+													start_substance, COLOR_WHITE, this.walker, { keep_dir_unnormalized: true });
 
 			ray.trace();
 			const color = ray.get_color();
 			this.screen.set_pixel(campx.x, campx.y, [color.r,color.g,color.b]);
 		}
 		this.screen.flush();
+	}
+
+	get tree() {
+		return this.otree;
+	}
+
+	get rng() {
+		return this._rng;
 	}
 }

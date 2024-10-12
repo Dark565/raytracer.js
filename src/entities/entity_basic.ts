@@ -19,6 +19,7 @@ import { Entity } from '@app/entity';
 import { Point } from '@app/math/geometry';
 import { Material } from '@app/material'
 import { Texture } from '@app/texture/texture';
+import Substance from '@app/substance';
 
 /** BasicEntity is an entity with static pos and material parameters. */
 export abstract class BasicEntity extends Entity {
@@ -26,8 +27,8 @@ export abstract class BasicEntity extends Entity {
 	protected material: Material;
 	protected texture: Texture;
 
-	constructor(entity_otree: EntityOtree, material: Material, texture: Texture, pos: Point) {
-		super(entity_otree);
+	constructor(entity_otree: EntityOtree, material: Material, texture: Texture, substance: Substance, pos: Point) {
+		super(entity_otree, substance);
 		this.material = material;
 		this.texture = texture;
 		this.pos = pos;

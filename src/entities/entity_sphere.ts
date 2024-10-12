@@ -23,16 +23,19 @@ import { CollisionInfo } from '@app/entity';
 import { BasicEntity } from '@app/entities/entity_basic';
 import { Material } from '@app/material';
 import { Texture } from '@app/texture/texture';
+import Substance from '@app/substance';
 import { Sphere, select_parameters, compute_intersection_point, IntersectionDirection } from '@app/math/intersection';
 
 export class SphereEntity extends BasicEntity {
 	private diameter: number;
 	private sphere_math: Sphere;
+	private _radius_sq: number;
 
-	constructor(entity_otree: EntityOtree, material: Material, texture: Texture, pos: Point, diameter: number) {
-		super(entity_otree, material, texture, pos);
+	constructor(entity_otree: EntityOtree, material: Material, texture: Texture, substance: Substance, pos: Point, diameter: number) {
+		super(entity_otree, material, texture, substance, pos);
 		this.diameter = diameter;
 		this.sphere_math = new Sphere(this.pos, this.diameter/2);
+		this._radius_sq = diameter*diameter / 4;
 	}
 
 	get_diameter(): number {
@@ -40,17 +43,26 @@ export class SphereEntity extends BasicEntity {
 	}
 
 	set_diameter(d: number): number {
+		const radius = d/2;
 		const old_diameter = this.diameter;
 		this.diameter = d;
-		this.sphere_math.radius = d/2;
+		this._radius_sq = radius * radius;
+		this.sphere_math.radius = radius;
+
 		return old_diameter;
 	}
 
-	set_position(p: Point): Point {
+	_set_pos(p: Point): Point {
 		const old_pos = this.pos;
 		this.pos = p;
 		this.sphere_math.pos = p;
+
 		return old_pos;
+	}
+
+	is_within(p: Point): boolean {
+		const dist = vector.sub(p, this.get_pos());
+		return vector.dot(dist,dist) <= this._radius_sq;
 	}
 
 	collision_info(ray: Ray): CollisionInfo|null {
@@ -67,6 +79,10 @@ export class SphereEntity extends BasicEntity {
 		const cross_point = compute_intersection_point(line, cross_param[0]);
 
 		const normal = vector.scale(vector.sub(cross_point, this.pos), 2/this.diameter);
+
+		 // Properly handle a situation when camera is within a sphere
+		vector.scale_self(normal, -Math.sign(vector.dot(raydir, normal)));
+
 		const coll_info = { point: cross_point, material: this.material, texture: this.texture, normal: normal };
 		return coll_info;
 	}
