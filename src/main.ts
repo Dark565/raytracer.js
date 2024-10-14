@@ -35,7 +35,8 @@ import { Camera, CameraConfig } from '@app/view/camera';
 import Screen from '@app/view/screen';
 import CanvasScreen from '@app/view/screen_canvas';
 import View from '@app/view/view';
-import { ToneMapper_StdDevAroundMean, ToneMapper_Identity } from'@app/view/tone_mapping';
+import ToneMapper from '@app/view/tone_mapping';
+import { ToneMapper_StdDevAroundMean, ToneMapper_Identity } from '@app/view/tone_mapping';
 import ExposureBuffer from '@app/view/exposure_buffer';
 import { SUBSTANCE_AIR, SUBSTANCE_WATER, SUBSTANCE_GLASS } from '@app/substance';
 import RNG from '@app/math/rng/rng';
@@ -172,9 +173,12 @@ class PlayerInterface {
 	tick_handler: ()=>void;
 	fps_samples: number[] = [];
 	fps_mean: number = 0; // sma(window_size)
+	tone_mappers: ToneMapper[];
+	cur_tone_mapper: number;
 
 	constructor(config: PlayerInterfaceConfig, canvas_elem: HTMLElement, stat_elem: HTMLDivElement,
-							camera: Camera, view: View, reset_pos: Point, tick_handler: ()=>void) {
+							camera: Camera, view: View, reset_pos: Point, tick_handler: ()=>void,
+							tone_mappers: ToneMapper[], cur_tone_mapper: number) {
 		this.config = config;
 		this.canvas_elem = canvas_elem;
 		this.stat_elem = stat_elem;
@@ -182,6 +186,8 @@ class PlayerInterface {
 		this.view = view;
 		this.reset_pos = reset_pos;
 		this.tick_handler = tick_handler;
+		this.tone_mappers = tone_mappers;
+		this.cur_tone_mapper = cur_tone_mapper;
 	}
 
 	install_events() {
@@ -228,7 +234,10 @@ class PlayerInterface {
 			
 			brightness:<br>
 			- μ: ${this.view.ebuffer.get_mean()}<br>
-			- stddev: ${Math.sqrt(this.view.ebuffer.get_variance(br_mean))}<br>`
+			- stddev: ${Math.sqrt(this.view.ebuffer.get_variance(br_mean))}<br><br>
+
+			tone mapper: ${this.tone_mappers[this.cur_tone_mapper].constructor.name}<br>
+			Click 'T' to change the tone mapper<br>`
 	}
 
 
@@ -308,6 +317,9 @@ class PlayerInterface {
 				case 'Shift': // move down
 					this.camera.move(vector.vector(0,0,-this.config.move_down));
 					break;
+				case 't': // change tone mapper
+					this.switch_tonemapper();
+					break;
 			}
 		}
 
@@ -315,6 +327,14 @@ class PlayerInterface {
 
 		this.tick();
 		this.update_stats();
+	}
+
+	private switch_tonemapper() {
+		this.cur_tone_mapper++;
+		if (this.cur_tone_mapper >= this.tone_mappers.length)
+			this.cur_tone_mapper = 0;
+
+		this.view.tone_mapper = this.tone_mappers[this.cur_tone_mapper];
 	}
 }
 
@@ -347,9 +367,6 @@ async function main() {
 	const screen = new CanvasScreen(canvas_ctx, { buffer_pixels: true });
 	const ebuffer = new ExposureBuffer(canvas.width, canvas.height, -1);
 	const tmapper = new ToneMapper_StdDevAroundMean(screen.dynamic_range, 1.0/(1<<screen.dynamic_range), 8.0);
-
-	const tone_mappers = [tmapper, ToneMapper_Identity.instance];
-	let cur_tone_mapper = 0;
 
 	const view = new View(ebuffer, screen, tmapper);
 
@@ -407,7 +424,9 @@ async function main() {
 		move_down: move_dist
 	}
 
-	const player_iface = new PlayerInterface(player_iface_conf, canvas, stat_div, camera, view, reset_pos, tick_fn);
+	const tone_mappers = [tmapper, ToneMapper_Identity.instance];
+	const player_iface = new PlayerInterface(player_iface_conf, canvas, stat_div, camera, view, reset_pos, tick_fn,
+																					 tone_mappers, 0);
 	player_iface.install_events();
 }
 
