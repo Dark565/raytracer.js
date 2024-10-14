@@ -24,7 +24,7 @@ import { Sky } from '@app/sky/sky';
 import { Color, color, clone_color, mul_color, clamp_color } from '@app/physics/color';
 import * as material from '@app/material';
 import { Camera } from '@app/view/camera';
-import { Screen } from '@app/view/screen';
+import ExposureBuffer from '@app/view/exposure_buffer';
 import RNG from '@app/math/rng/rng';
 import { isotropic_sphere_sample } from '@app/math/vector_utils';
 import Substance from '@app/substance';
@@ -152,9 +152,10 @@ export class Ray {
 	 * Used to get rid of the last collision point from future collision tests */
 	move_slightly_forward() {
 		const dir = this.dir;
-		const move_dir = vector.hadamard(vector.vector3(Number.EPSILON, Number.EPSILON, Number.EPSILON),
-																		 vector.vector3(Math.sign(dir.v[0]), Math.sign(dir.v[1]), Math.sign(dir.v[2])));
-		vector.add_self(this.refpoint, move_dir);
+		//const move_dir = vector.hadamard(vector.vector3(Number.EPSILON, Number.EPSILON, Number.EPSILON),
+		//																 vector.vector3(Math.sign(dir.v[0]), Math.sign(dir.v[1]), Math.sign(dir.v[2])));
+		//vector.add_self(this.refpoint, move_dir);
+		vector.add_self(this.refpoint, vector.scale(dir, 1e-3));
 	}
 
 	/** Trace and modify the ray along its path */
@@ -245,7 +246,7 @@ export class Ray {
 					return;
 				}
 
-				walker.set_position(this.refpoint);
+				walker.set_pos_and_dir(this.refpoint, this.dir);
 
 				if (this.refcount >= this.refmax) {
 					//console.log(`${debug.unique_object_id(this)}: reflection limit`);
@@ -266,7 +267,7 @@ export class Ray {
 
 		/* Attenuate the ray's intensity due to the inverse square law */
 		const isl_coef = 1.0 / (Number.EPSILON + (this.path_distance * this.tracer.config.distance_attenuation_factor)**2);
-		this.color = clamp_color(mul_color(this.color, { r: isl_coef, g: isl_coef, b: isl_coef, a: 1.0 }));
+		this.color = mul_color(this.color, { r: isl_coef, g: isl_coef, b: isl_coef, a: 1.0 });
 		walker.set_pos_and_dir(this.refpoint, this.dir);
 	}
 }
@@ -276,15 +277,15 @@ export class Raytracer {
 	private otree: EntityOtree;
 	private walker: EntityOtreeWalker;
 	private camera: Camera;
-	private screen: Screen;
+	private ebuffer: ExposureBuffer;
 	/** A random number generator engine. Used for phenomena like light scattering */
 	private _rng: RNG; 
 
 	config: RaytracerConfig;
 
-	constructor(config: RaytracerConfig, otree: EntityOtree, camera: Camera, screen: Screen, rng: RNG) {
+	constructor(config: RaytracerConfig, otree: EntityOtree, camera: Camera, ebuffer: ExposureBuffer, rng: RNG) {
 		this.camera = camera;
-		this.screen = screen;
+		this.ebuffer = ebuffer;
 		this.otree = otree;
 		this.walker = new_entity_octree_walker(otree);
 		this._rng = rng;
@@ -295,8 +296,8 @@ export class Raytracer {
 		this.camera = camera;
 	}
 
-	set_screen(screen: Screen) {
-		this.screen = screen;
+	set_ebuffer(ebuffer: ExposureBuffer) {
+		this.ebuffer = ebuffer;
 	}
 
 	trace_frame() {
@@ -312,9 +313,8 @@ export class Raytracer {
 
 			ray.trace();
 			const color = ray.get_color();
-			this.screen.set_pixel(campx.x, campx.y, [color.r,color.g,color.b]);
+			this.ebuffer.set_color(campx.x, campx.y, [color.r,color.g,color.b]);
 		}
-		this.screen.flush();
 	}
 
 	get tree() {

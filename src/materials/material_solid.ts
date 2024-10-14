@@ -1,3 +1,19 @@
+/*
+ * Copyright 2024 Grzegorz Kociołek
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import { StaticMaterial, ResponseType } from '@app/material';
 import { Color, clone_color, mul_color } from '@app/physics/color';
 import { Entity } from '@app/entity';
@@ -23,5 +39,6 @@ export class SolidMaterial extends StaticMaterial {
 export const SIMPLE_SMOOTH_MATERIAL = new SolidMaterial(ResponseType.REFLECTION, false, true, 0);
 export const SIMPLE_LIGHT_MATERIAL  = new SolidMaterial(ResponseType.REFLECTION, true, false, 0);
 
-export const SIMPLE_ROUGH_MATERIAL = new SolidMaterial(ResponseType.REFLECTION, false, true, 0.33);
+export const SIMPLE_ROUGH_MATERIAL = new SolidMaterial(ResponseType.REFLECTION, false, true, 0.5);
+//export const SIMPLE_ROUGH_MATERIAL = new SolidMaterial(ResponseType.REFLECTION, false, true, 0);
 export const SIMPLE_TRANSPARENT_MATERIAL = new SolidMaterial(ResponseType.TRANSMISSION, false, false, 0);

@@ -269,9 +269,10 @@ export class OctreeWalker<T> {
 
 		//inter_param[0].parameter += Number.EPSILON;
 		const ipoint = intersection.compute_intersection_point(line, inter_param[0]);
-		const n_octant = octant_adj_pos(this.tree, ipoint);
+		//const n_octant = octant_adj_pos(this.tree, ipoint);
 
-		this.cur_node = {tree: this.tree, octant: n_octant};
+		//this.cur_node = {tree: this.tree, octant: n_octant};
+		this.cur_node = {tree: this.tree, octant: undefined};
 		this.next_pos = [ipoint, vector.negate(inter_param[0].normal)];
 		return true;
 	}

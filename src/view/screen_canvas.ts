@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import * as vector from '@app/math/vector';
 import { clamp } from '@app/math/mathutils';
-import { Screen, RGBPixel, ScreenFlags } from '@app/view/screen';
+import Screen from '@app/view/screen';
+import { RGBPixel, ScreenFlags } from '@app/view/screen';
 
 type RGBPixel_u8 = [number,number,number];
 
 /** The HTML canvas screen output */
-export class CanvasScreen extends Screen {
+class CanvasScreen extends Screen {
 	private canvas_ctx: CanvasRenderingContext2D;
 	private canvas: HTMLCanvasElement;
 	private image: ImageData;
@@ -37,27 +37,20 @@ export class CanvasScreen extends Screen {
 
 	set_pixel(x: number, y: number, pixel: RGBPixel) {
 		this.check_bounds(x,y);
+		const i = this.canvas.width * y + x;
 
-		const w = this.canvas.width;
-		const i = (y * w + x) << 2;
+		this.set_pixel_i(i, pixel);
+	}
 
-		/** TODO: The exposure mechanism should be moved out of the Screen class
-		 *        to a specialized exposure buffer which operates on real pixel values.
-		 *        The purpose of this class should only be drawing image.
-		 */
+	set_pixel_i(i: number, pixel: RGBPixel) {	
+		const col_conv = this.convert_color(pixel);
+		const pos = i * 4;
 
-		const old_col_vec = vector.vector3(this.image.data[i], 
-																			 this.image.data[i+1],
-																			 this.image.data[i+2]);
+		this.image.data[pos] = col_conv[0];
+		this.image.data[pos+1] = col_conv[1];
+		this.image.data[pos+2] = col_conv[2];
+		this.image.data[pos+3] = 0xff;
 
-		let col_vec = vector.vector3(...this.convert_color(pixel));
-		vector.scale_self(col_vec, this.col_weight);
-		vector.add_self(col_vec, vector.scale(old_col_vec, 1 - this.col_weight));
-
-		this.image.data[i]   = col_vec.v[0] << 0;
-		this.image.data[i+1] = col_vec.v[1] << 0;
-		this.image.data[i+2] = col_vec.v[2] << 0;
-		this.image.data[i+3] = 0xff;
 		if (!this.flags.buffer_pixels)
 			this.flush();
 	}
@@ -99,4 +92,10 @@ export class CanvasScreen extends Screen {
 	private convert_color(pixel: RGBPixel): RGBPixel_u8 {
 		return pixel.map((x) => (clamp(x,0,1)*255)<<0) as RGBPixel_u8;
 	}
+
+	get dynamic_range() {
+		return 8;
+	}
 }
+
+export default CanvasScreen;

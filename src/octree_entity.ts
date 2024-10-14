@@ -182,7 +182,6 @@ export function add_entity_to_octree(tree: EntityOtree, entity: Entity, config: 
 	}
 
 	fitting_node = extend_tree_inside_to_fit_up_to_depth(tree, fitting_node, ent_aabb_iface, config.max_in_depth);
-	fitting_node.value.set.add(entity);
 	entity.set_octree(fitting_node);
 
 	return fitting_node;

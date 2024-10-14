@@ -22,31 +22,14 @@ export interface ScreenFlags {
 }
 
 /** A class abstracting a concept of screen output */
-export abstract class Screen {
-	/** The number of exposure frames */
-	protected frame_count: number;
-
-	/** The weight of new pixels added to the mean */
-	protected col_weight: number;
-
-	constructor() {
-		this.reset_exposure();
-	}
-
-	/** Start a new exposure frame */
-	next_frame() {
-		++this.frame_count;
-		this.col_weight = 1 / (1 + this.frame_count);
-	}
-
-	/** Reset the light exposure */
-	reset_exposure() {
-		this.frame_count = 0;
-		this.col_weight = 1;
-	}
+abstract class Screen {
 
 	/** Set a particular pixel to a specific color value */
 	abstract set_pixel(x: number, y: number, color: RGBPixel): void;
+
+	/** Set a particular pixel at index to a speicific color value */
+	abstract set_pixel_i(i: number, color: RGBPixel): void;
+
 	/** Ensures the set pixels are put on the screen and increases the number of exposure frames */
 	abstract flush(): void;
 
@@ -56,4 +39,9 @@ export abstract class Screen {
 	/** Set flags and return old flags */
 	abstract set_flags(flags: ScreenFlags): ScreenFlags;
 	abstract get_flags(flags: ScreenFlags): ScreenFlags;
+
+	/** The dynamic range (in stops) a screen can handle */
+	abstract get dynamic_range(): number;
 }
+
+export default Screen;

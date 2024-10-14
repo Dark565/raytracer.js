@@ -52,6 +52,7 @@ export abstract class Entity {
 			this._octree.value.set.delete(this);
 
 		this._octree = tree;
+		tree.value.set.add(this);
 	}
 
 	get octree() {

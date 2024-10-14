@@ -32,15 +32,19 @@ import { SolidTexture } from '@app/texture/texture_solid';
 import { SkySphere } from '@app/sky/sky_sphere';
 import { Raytracer, RaytracerConfig } from '@app/raytracer';
 import { Camera, CameraConfig } from '@app/view/camera';
-import { Screen } from '@app/view/screen';
-import { CanvasScreen } from '@app/view/screen_canvas';
+import Screen from '@app/view/screen';
+import CanvasScreen from '@app/view/screen_canvas';
+import View from '@app/view/view';
+import { ToneMapper_StdDevAroundMean, ToneMapper_Identity } from'@app/view/tone_mapping';
+import ExposureBuffer from '@app/view/exposure_buffer';
 import { SUBSTANCE_AIR, SUBSTANCE_WATER, SUBSTANCE_GLASS } from '@app/substance';
 import RNG from '@app/math/rng/rng';
+import SystemRNG from '@app/math/rng/system-rng';
 import FpLcg from '@app/math/rng/fp-lcg';
 
 const CANVAS_ID = 'rtcanvas';
 const STATS_DIV_ID = 'rtstats';
-const REFMAX = 6;
+const REFMAX = 4;
 const RANDOM_SEED = 42;
 
 const TEXTURE_URLS: [string,boolean,boolean][] = 
@@ -60,13 +64,13 @@ function get_random_color_with_intensity(rng: RNG, intensity: number): Color {
 }
 
 /* Return a random image texture or a new solid color one */
-function get_random_texture(rng: RNG, img_txt_prob: number, img_textures: Texture[]) {
+function get_random_texture(rng: RNG, img_txt_prob: number, img_textures: Texture[], intensity: number) {
 	const rnd = rng.next();
 	if (rnd <= img_txt_prob) { // get image texture
 		const txt_i = (rng.next() * img_textures.length) << 0;
 		return img_textures[txt_i];
 	} else {
-		const rand_color = get_random_color_with_intensity(rng, 1.0);
+		const rand_color = get_random_color_with_intensity(rng, intensity);
 		return new SolidTexture(rand_color);
 	}
 }
@@ -127,12 +131,14 @@ function generate_some_aligned_entities(tree: EntityOtree, rng: RNG, n_entities:
 		const substance = substances[(rng.next() * substances.length) << 0];
 		const material = get_random_element_with_weights(rng, materials, material_prob_weights);
 
-		const texture = get_random_texture(rng, material == SIMPLE_LIGHT_MATERIAL || !ent_class.is_textured ? 0 : img_txt_prob, img_textures);
+		const texture = get_random_texture(rng, material == SIMPLE_LIGHT_MATERIAL || !ent_class.is_textured ? 0 : img_txt_prob, img_textures,
+																			 material == SIMPLE_LIGHT_MATERIAL ? 5.0 : 1.0);
+
 		console.log(`${x}, ${y}, ${z}   ${size}`);
 		const entity = new ent_class.class(undefined, material, texture, substance, e_point, size);
 		//entity.set_octree(tree);
 		//tree.value.set.add(entity);
-		add_entity_to_octree(tree, entity, { max_in_depth: 16, max_out_depth: 4 });
+		add_entity_to_octree(tree, entity, { max_in_depth: 16, max_out_depth: 0 });
 	}
 	//add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.5,0.5,0.5), 1), { max_in_depth: 5, max_out_depth: 5 });
 	//add_entity_to_octree(tree, new SphereEntity(undefined, material, point(0.76,0.5,0.5), 0.5), { max_in_depth: 5, max_out_depth: 5 });
@@ -162,18 +168,18 @@ class PlayerInterface {
 
 	reset_pos: Point;
 	camera: Camera;
-	screen: Screen;
+	view: View;
 	tick_handler: ()=>void;
 	fps_samples: number[] = [];
 	fps_mean: number = 0; // sma(window_size)
 
 	constructor(config: PlayerInterfaceConfig, canvas_elem: HTMLElement, stat_elem: HTMLDivElement,
-							camera: Camera, screen: Screen, reset_pos: Point, tick_handler: ()=>void) {
+							camera: Camera, view: View, reset_pos: Point, tick_handler: ()=>void) {
 		this.config = config;
 		this.canvas_elem = canvas_elem;
 		this.stat_elem = stat_elem;
-		this.screen = screen;
 		this.camera = camera;
+		this.view = view;
 		this.reset_pos = reset_pos;
 		this.tick_handler = tick_handler;
 	}
@@ -194,6 +200,8 @@ class PlayerInterface {
 				});
 			}
 		});
+
+		setInterval(() => { if (this.view.ebuffer.next_frame()) this.tick() }, 16.6666);
 	}
 
 	update_stats() {
@@ -207,6 +215,8 @@ class PlayerInterface {
 		const angle_deg_x = vector.angle2D(fr_vec_xy) * 180/Math.PI;
 		const angle_deg_y = vector.angle2D(vector.vector2(vector.length(fr_vec_xy), fr_vec.v[2])) * 180/Math.PI;
 
+		const br_mean = this.view.ebuffer.get_mean();
+
 		this.stat_elem.innerHTML = `
 			<h2>Camera</h2>
 			pos: ${pos.v.map((x)=>x.toPrecision(4))}<br>
@@ -214,7 +224,11 @@ class PlayerInterface {
 			- angles: ${angle_deg_x.toPrecision(4)}°, ${angle_deg_y.toPrecision(4)}°<br><br>
 
 			fps: ${(this.fps_samples[this.fps_samples.length-1] ?? 0).toPrecision(4)}<br>
-			- μ(${this.config.fps_mean_window_size}): ${this.fps_mean}`
+			- μ(${this.config.fps_mean_window_size}): ${this.fps_mean}<br><br>
+			
+			brightness:<br>
+			- μ: ${this.view.ebuffer.get_mean()}<br>
+			- stddev: ${Math.sqrt(this.view.ebuffer.get_variance(br_mean))}<br>`
 	}
 
 
@@ -229,6 +243,8 @@ class PlayerInterface {
 	}
 
 	private tick() {
+		console.log("-- tick --");
+
 		const time_start = performance.now();
 		this.tick_handler();
 		const time_end = performance.now();
@@ -258,7 +274,7 @@ class PlayerInterface {
 		this.camera.rotate_h_step(delta_x);
 		this.camera.rotate_v_step(delta_y);
 
-		this.screen.reset_exposure();
+		this.view.ebuffer.reset_exposure();
 
 		this.tick();
 		this.update_stats();
@@ -295,7 +311,7 @@ class PlayerInterface {
 			}
 		}
 
-		this.screen.reset_exposure();
+		this.view.ebuffer.reset_exposure();
 
 		this.tick();
 		this.update_stats();
@@ -312,6 +328,7 @@ async function main() {
 		console.log(`${STATS_DIV_ID} element not found. Statistics will not be shown`);
 
 	const prng = new FpLcg(obtain_seed_from_url_param() ?? RANDOM_SEED);
+	const system_rng = new SystemRNG();
 
 	const camera_conf: CameraConfig = {
 		fov_v: Math.PI*0.5,
@@ -326,8 +343,15 @@ async function main() {
 	const canvas_ctx = canvas.getContext("2d");
 	const reset_pos = point(0.5,0.5,0.5);
 
-	const screen = new CanvasScreen(canvas_ctx, { buffer_pixels: true });
 	const camera = new Camera(camera_conf, reset_pos, 0, Math.PI/180 * 30);
+	const screen = new CanvasScreen(canvas_ctx, { buffer_pixels: true });
+	const ebuffer = new ExposureBuffer(canvas.width, canvas.height, -1);
+	const tmapper = new ToneMapper_StdDevAroundMean(screen.dynamic_range, 1.0/(1<<screen.dynamic_range), 8.0);
+
+	const tone_mappers = [tmapper, ToneMapper_Identity.instance];
+	let cur_tone_mapper = 0;
+
+	const view = new View(ebuffer, screen, tmapper);
 
 	const otree = new_entity_octree({pos: point(0,0,0), size: 1}, undefined);
 
@@ -348,7 +372,13 @@ async function main() {
 
 	console.log("textures loaded");
 
+	const white_txt = new SolidTexture({r:1,g:1,b:1,a:1});
+	const scene_box = new BoxEntity(otree, SIMPLE_ROUGH_MATERIAL, white_txt, SUBSTANCE_AIR, point(0.5,0.5,0.5), 1);
+	
 	generate_some_aligned_entities(otree, prng, 16, 0.0, [1, 1, 1, 1], textures);
+	add_entity_to_octree(otree, scene_box, {max_in_depth:1, max_out_depth:0});
+
+
 	const sky = new SkySphere(sky_txt);
 
 	const raytracer_conf: RaytracerConfig = {
@@ -358,10 +388,12 @@ async function main() {
 		sky: sky
 	};
 
-	const raytracer = new Raytracer(raytracer_conf, otree, camera, screen, prng);
+	const raytracer = new Raytracer(raytracer_conf, otree, camera, ebuffer, prng);
 
 	const tick_fn = () => {
 		raytracer.trace_frame();
+		view.draw_ebuffer();
+		view.screen.flush();
 	}
 
 	const move_dist = 1e-1;
@@ -375,7 +407,7 @@ async function main() {
 		move_down: move_dist
 	}
 
-	const player_iface = new PlayerInterface(player_iface_conf, canvas, stat_div, camera, screen, reset_pos, tick_fn);
+	const player_iface = new PlayerInterface(player_iface_conf, canvas, stat_div, camera, view, reset_pos, tick_fn);
 	player_iface.install_events();
 }
 
