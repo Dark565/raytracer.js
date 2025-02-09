@@ -121,6 +121,7 @@ export class Ray {
 	scatter_ray(coll_info: CollisionInfo) {
 		const rng = this.tracer.rng;
 		const rand_vec = isotropic_sphere_sample(rng);
+		//const rand_vec = vector.vector3(rng.next()*2-1, rng.next()*2-1, rng.next()*2-1)
 
 		if (vector.dot(rand_vec,coll_info.normal) < 0)
 			vector.scale_self(rand_vec, -1);
@@ -146,6 +147,10 @@ export class Ray {
 		} else { // total internal reflection
 			this.reflect_ray(coll_info);
 		}
+	}
+
+	transmit_or_reflect_ray(coll_info: CollisionInfo) {
+
 	}
 
 	/** Move slightly forward towards the ray's direction.
@@ -307,8 +312,15 @@ export class Raytracer {
 		const start_ent = entity_at_pos(this.otree, start_pos);
 		const start_substance = start_ent ? start_ent.get_substance() : this.config.default_substance;
 
+		const rng = this.rng;
+		//const cur_frame = this.ebuffer.current_frame;
+
 		for (let campx of this.camera.get_dir_for_each_pixel()) {
-			const ray = new Ray(this, this.config.refmax, start_pos, start_node, campx.dir,
+			let dir = campx.dir;
+			//const rand_vec = isotropic_sphere_sample(rng);
+			//dir = <vector.Vector3> vector.add(dir, vector.scale(rand_vec, 1e-2));
+
+			const ray = new Ray(this, this.config.refmax, start_pos, start_node, dir,
 													start_substance, COLOR_WHITE, this.walker, { keep_dir_unnormalized: true });
 
 			ray.trace();

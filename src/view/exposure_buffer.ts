@@ -24,7 +24,7 @@ type RGB = [number,number,number];
 //type YUV = [number,number,number];
 
 class ExposureBuffer {
-	protected pixels: number[];
+	protected pixels: Float32Array;
 	protected width: number;
 	protected height: number;
 	/** The number of exposure frames */
@@ -34,13 +34,15 @@ class ExposureBuffer {
 	/** THe maximum number of exposure frames */
 	protected max_exposure_frames: number;
 
+	get current_frame() { return this.frame_count; }
+
 	/* -- cache -- */
 	private _mean: number;
 	private _variance: number;
 	private _absdev: number;
 
 	constructor(width: number, height: number, max_exposure_frames: number) {
-		this.pixels = new Array(width * height * 3).fill(0);
+		this.pixels = new Float32Array(width * height * 3).fill(0);
 		this.width = width;
 		this.height = height;
 		this.max_exposure_frames = max_exposure_frames;
@@ -80,7 +82,7 @@ class ExposureBuffer {
 		let col_vec = vector.vector3(...pixel);
 		vector.scale_self(col_vec, this.col_weight);
 		vector.add_self(col_vec, vector.scale(old_col_vec, 1 - this.col_weight));
-
+			
 		this.pixels[i]   = col_vec.v[0];
 		this.pixels[i+1] = col_vec.v[1];
 		this.pixels[i+2] = col_vec.v[2];
@@ -148,7 +150,7 @@ class ExposureBuffer {
 			const cmpr_brightness = (px_brightness - drange_low) / drange;
 			const scale_coef = cmpr_brightness / (px_brightness + Number.EPSILON); // EPS is added to avoid div by 0
 
-			const compressed_c = <RGBPixel> this.pixels.slice(i,i+3).map((c) => {
+			const compressed_c = <RGBPixel> <unknown> this.pixels.slice(i,i+2).map((c) => {
 				return clamp(c * scale_coef, 0.0, 1.0);
 			});
 			screen.set_pixel_i(px_i, compressed_c);
